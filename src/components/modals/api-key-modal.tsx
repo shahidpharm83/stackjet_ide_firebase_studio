@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -173,7 +174,7 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
           </DialogDescription>
         </DialogHeader>
         
-        <div className="rounded-md border mt-4">
+        <div className="rounded-md border mt-4 max-h-60 overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
