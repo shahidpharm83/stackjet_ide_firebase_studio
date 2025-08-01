@@ -138,22 +138,28 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         if (stepIndex >= totalSteps) {
             clearInterval(interval);
             setAgentState("summarizing");
-            setMessages(prev => prev.map((msg, idx) => 
-                idx === messageIndex ? { 
-                    ...msg, 
-                    isExecuting: false,
-                    timings: { ...(msg.timings || { start: Date.now() }), executionEnd: Date.now() } 
-                } : msg
-            ));
+            setMessages(prev => prev.map((msg, idx) => {
+                if (idx === messageIndex) {
+                    return { 
+                        ...msg, 
+                        isExecuting: false,
+                        timings: { ...(msg.timings || { start: Date.now() }), executionEnd: Date.now() } 
+                    };
+                }
+                return msg;
+            }));
 
             setTimeout(() => {
                 setAgentState("idle");
-                setMessages(prev => prev.map((msg, idx) => 
-                    idx === messageIndex ? { 
-                        ...msg,
-                        timings: { ...(msg.timings || { start: Date.now() }), summaryEnd: Date.now() } 
-                    } : msg
-                ));
+                setMessages(prev => prev.map((msg, idx) => {
+                    if (idx === messageIndex) {
+                        return { 
+                            ...msg,
+                            timings: { ...(msg.timings || { start: Date.now() }), summaryEnd: Date.now() } 
+                        };
+                    }
+                    return msg;
+                }));
             }, 1500); // Time for summary
             return;
         }
@@ -256,6 +262,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         setTimeout(() => {
           if (result.plan) {
              startExecution(newAssistantMessageIndex, result.plan);
+          } else {
+             setAgentState("idle");
           }
         }, 1500); 
         
@@ -489,6 +497,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     switch (agentState) {
         case 'thinking': return `Thinking... (${thinkingTime}s)`;
         case 'executing': return 'Executing plan...';
+        case 'summarizing': return 'Finalizing summary...';
         case 'error': return 'An error occurred.';
         default: return null;
     }
@@ -500,7 +509,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         <div className="space-y-6">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center">
-              <Bot className="w-12 h-12 mb-4 text-primary" />
+              <Bot className="w-12 h-12 text-primary" />
               <h2 className="text-lg font-semibold">Agentic AI Assistant</h2>
               <p className="text-sm">
                 I can analyze your requests, create a plan, and execute it for you.
@@ -515,7 +524,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
               </div>
             </div>
           ))}
-          {agentState !== 'idle' && agentState !== 'summarizing' && (
+          {agentState !== 'idle' && (
              <div className="flex items-start gap-3">
                 <Bot className="w-6 h-6 text-primary flex-shrink-0" />
                  <div className="flex items-center gap-2 text-muted-foreground">
@@ -556,3 +565,5 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
+
+    
