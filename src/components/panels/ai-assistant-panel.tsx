@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCircle, ChevronRight, ChevronsRight, Pencil, Lightbulb, ClipboardCheck, Play } from "lucide-react";
+import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCircle, ChevronRight, ChevronsRight, Pencil, Lightbulb, ClipboardCheck, Play, Download } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,16 @@ type AgentState = "idle" | "thinking" | "analyzing" | "planning" | "executing" |
 type AiAssistantPanelProps = {
   project: Project | null;
 };
+
+const CommandOutput = ({ command, outcome }: { command: string; outcome: string }) => (
+  <div className="bg-black/80 rounded-md p-3 font-code text-xs mt-2">
+    <div className="flex items-center gap-2">
+      <span className="text-green-400">$</span>
+      <span className="text-white">{command}</span>
+    </div>
+    <div className="text-gray-400 whitespace-pre-wrap">{outcome}</div>
+  </div>
+);
 
 
 export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
@@ -96,7 +107,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             if (nextStep >= totalSteps) {
                 clearInterval(interval);
                 setAgentState("summarizing");
-                setTimeout(() => setAgentState("idle"), 2000); // Reset to idle
+                setTimeout(() => setAgentState("idle"), 2000); 
             }
             return nextStep;
         });
@@ -104,7 +115,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   }, []);
 
   const sendPrompt = useCallback(async (promptText: string) => {
-    if (!promptText.trim()) return;
+    if (!promptText.trim() || agentState !== 'idle') return;
 
     const userMessage: Message = { 
       role: "user", 
@@ -125,7 +136,6 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setMessages((prev) => [...prev, assistantMessage]);
       setAgentState("planning");
       
-      // Automatically start execution
       handleStartExecution(result.plan);
 
     } catch (error) {
@@ -136,8 +146,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       };
       setMessages((prev) => [...prev, errorMessage]);
       setAgentState("error");
+      setTimeout(() => setAgentState("idle"), 2000);
     }
-  }, [handleStartExecution]);
+  }, [agentState, handleStartExecution]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,19 +157,38 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   
   const renderStepIcon = (action: string) => {
     switch (action) {
-      case 'write':
-      case 'edit':
-        return <Pencil className="w-4 h-4 text-blue-400" />;
-      case 'read':
-        return <File className="w-4 h-4 text-gray-400" />;
-      case 'delete':
-        return <XCircle className="w-4 h-4 text-red-400" />;
+      case 'write': return <Pencil className="w-4 h-4 text-blue-400" />;
+      case 'edit': return <Pencil className="w-4 h-4 text-blue-400" />;
+      case 'read': return <File className="w-4 h-4 text-gray-400" />;
+      case 'delete': return <XCircle className="w-4 h-4 text-red-400" />;
       case 'rename':
       case 'move':
         return <ChevronsRight className="w-4 h-4 text-yellow-400" />;
       default: // Catches 'command' and any other case
         return <Terminal className="w-4 h-4 text-green-400" />;
     }
+  };
+  
+  const handleDownloadPatch = (plan: AgenticFlowOutput['plan']) => {
+    let patchContent = '';
+    plan.forEach(step => {
+      if ('fileName' in step && (step.action === 'write' || step.action === 'edit')) {
+        patchContent += `--- a/${step.fileName}\n`;
+        patchContent += `+++ b/${step.fileName}\n`;
+        patchContent += `@@ -0,0 +1,${(step.content?.match(/\n/g) || []).length + 1} @@\n`;
+        patchContent += `${step.content?.split('\n').map(line => `+${line}`).join('\n')}\n`;
+      }
+    });
+
+    const blob = new Blob([patchContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'agent-changes.patch';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const AgentResponse = ({ response, setInput }: { response: AgenticFlowOutput, setInput: (value: string) => void }) => {
@@ -201,6 +231,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                         <p><strong className="font-medium text-foreground/90">Purpose:</strong> {step.purpose}</p>
                         <p><strong className="font-medium text-foreground/90">Outcome:</strong> {step.expectedOutcome}</p>
                       </div>
+                      {isExecutingOrDone && index < executedSteps && 'command' in step && (
+                        <CommandOutput command={step.command} outcome={step.expectedOutcome} />
+                      )}
                     </div>
                   )
                 })}
@@ -233,9 +266,13 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                 </Alert>
                 
                 <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Suggestions</h4>
+                    <h4 className="font-semibold text-sm">Next Steps</h4>
                     <div className="flex flex-wrap gap-2">
-                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => setInput(s)}>{s}</Button>)}
+                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { setInput(s); }}>{s}</Button>)}
+                        <Button variant="default" size="sm" onClick={() => handleDownloadPatch(response.plan)}>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Patch
+                        </Button>
                     </div>
                 </div>
               </>
@@ -315,7 +352,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSubmit(e);
+                  sendPrompt(input);
                 }
               }}
             />
@@ -323,7 +360,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
               <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
                 <Mic className="w-5 h-5" />
               </Button>
-              <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()}>
+              <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()} onClick={() => sendPrompt(input)}>
                 <Send className="w-5 h-5" />
               </Button>
             </div>
@@ -333,3 +370,5 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
+
+    
