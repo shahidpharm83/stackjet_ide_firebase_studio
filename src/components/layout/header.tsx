@@ -19,7 +19,7 @@ export default function Header({ project, onCloseProject }: HeaderProps) {
       <header className="flex h-12 items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-2">
           <Bot className="w-6 h-6 text-primary" />
-          <h1 className="text-lg font-bold">LiveEdit AI</h1>
+          <h1 className="text-lg font-bold">Stackjet IDE</h1>
         </div>
         {project && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

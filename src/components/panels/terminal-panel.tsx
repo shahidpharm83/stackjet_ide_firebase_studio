@@ -27,12 +27,12 @@ export default function TerminalPanel({ projectOpen }: TerminalPanelProps) {
           {projectOpen ? (
             <>
               <p>
-                <span className="text-green-400">root@liveedit-ai</span>
+                <span className="text-green-400">root@stackjet-ide</span>
                 <span className="text-primary">~</span>
                 <span>$ npm start</span>
               </p>
               <p>
-                <span className="text-muted-foreground">> liveedit-ai@0.1.0 start</span>
+                <span className="text-muted-foreground">> stackjet-ide@0.1.0 start</span>
               </p>
               <p>
                 <span className="text-muted-foreground">> next dev --turbopack -p 9002</span>
