@@ -9,7 +9,7 @@ import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCirc
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { agenticFlow, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
+import { agenticFlow, AgenticFlowOutput, AgenticFlowInput } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Project } from '@/app/page';
@@ -140,11 +140,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     while (true) { // Unlimited retries
       const currentKey = keys[keyIndex];
       try {
-        // We'll dynamically pass the key to the flow if the backend supports it,
-        // for now, we assume the backend (genkit) is configured to pick it up from env or a similar place.
-        // The core logic here is the retry loop.
         console.log(`Attempting request with key: ${currentKey.name}`);
-        const result = await agenticFlow({ prompt: promptText });
+        // Pass the specific key to the backend flow.
+        const result = await agenticFlow({ prompt: promptText, apiKey: currentKey.key });
         return result; // Success
       } catch (error) {
         console.error(`API call failed for key ${currentKey.name}:`, error);
@@ -177,8 +175,11 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setMessages((prev) => [...prev, assistantMessage]);
       setAgentState("planning");
       
-      // Automatically start execution without user prompt
-      handleStartExecution(result.plan);
+      // Automatically start execution after a short delay to show the plan
+      setTimeout(() => {
+        handleStartExecution(result.plan);
+      }, 1000);
+
 
     } catch (error: any) {
       console.error("AI Agent error:", error);
@@ -310,7 +311,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                 <div className="space-y-2">
                     <h4 className="font-semibold text-sm">Next Steps</h4>
                     <div className="flex flex-wrap gap-2">
-                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { setInput(s); }}>{s}</Button>)}
+                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
                         <Button variant="default" size="sm" onClick={() => handleDownloadPatch(response.plan)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download Patch

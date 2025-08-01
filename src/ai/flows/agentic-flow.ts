@@ -10,6 +10,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {genkit} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 const FileOperationSchema = z.object({
   fileName: z.string().describe('The full relative path of the file.'),
@@ -32,6 +34,7 @@ const PlanStepSchema = z.union([
 
 const AgenticFlowInputSchema = z.object({
   prompt: z.string().describe('The user\'s request.'),
+  apiKey: z.string().optional().describe('The Gemini API key to use for this request.'),
 });
 export type AgenticFlowInput = z.infer<typeof AgenticFlowInputSchema>;
 
@@ -43,13 +46,10 @@ const AgenticFlowOutputSchema = z.object({
 });
 export type AgenticFlowOutput = z.infer<typeof AgenticFlowOutputSchema>;
 
-export async function agenticFlow(input: AgenticFlowInput): Promise<AgenticFlowOutput> {
-  return agenticFlowRunner(input);
-}
 
 const agenticPrompt = ai.definePrompt({
   name: 'agenticPrompt',
-  input: {schema: AgenticFlowInputSchema},
+  input: {schema: AgenticFlowInputSchema.pick({ prompt: true })}, // Prompt only needs the prompt field
   output: {schema: AgenticFlowOutputSchema},
   prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
@@ -68,14 +68,35 @@ Ensure all file paths are relative. For any new code, provide the complete file 
 `,
 });
 
-const agenticFlowRunner = ai.defineFlow(
+export const agenticFlow = ai.defineFlow(
   {
     name: 'agenticFlow',
     inputSchema: AgenticFlowInputSchema,
     outputSchema: AgenticFlowOutputSchema,
   },
   async (input) => {
-    const {output} = await agenticPrompt(input);
+    let executionAi = ai; // Use the default instance
+
+    // If a specific API key is provided, create a temporary, isolated Genkit instance for this call.
+    if (input.apiKey) {
+      executionAi = genkit({
+        plugins: [
+          googleAI({
+            apiKey: input.apiKey,
+          }),
+        ],
+        logLevel: 'silent', // We don't need to log these dynamic, per-request instances
+      });
+    }
+
+    const promptToUse = executionAi.lookup('prompt', 'agenticPrompt');
+    if (!promptToUse) {
+      throw new Error('Agentic prompt not found');
+    }
+    
+    // We only pass the 'prompt' field to the actual prompt, not the api key.
+    const {output} = await promptToUse({ prompt: input.prompt });
+
     return output!;
   }
 );
