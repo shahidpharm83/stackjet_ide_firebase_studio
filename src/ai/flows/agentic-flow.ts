@@ -33,10 +33,14 @@ const PlanStepSchema = z.union([
     CommandOperationSchema
 ]);
 
+export type PlanStep = z.infer<typeof PlanStepSchema>;
+
 const AgenticFlowInputSchema = z.object({
-  prompt: z.string().describe('The user\'s request.'),
+  prompt: z.string().describe("The user's original request."),
   apiKey: z.string().optional().describe('The Gemini API key to use for this request.'),
   imageDataUri: z.string().optional().describe("An optional image provided by the user, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
+  previousPlan: z.array(PlanStepSchema).optional().describe('A plan that was previously executed and failed.'),
+  executionError: z.string().optional().describe('The error message that resulted from the failed execution of the previous plan.'),
 });
 export type AgenticFlowInput = z.infer<typeof AgenticFlowInputSchema>;
 
@@ -51,7 +55,7 @@ export type AgenticFlowOutput = z.infer<typeof AgenticFlowOutputSchema>;
 
 const agenticPrompt = ai.definePrompt({
   name: 'agenticPrompt',
-  input: {schema: AgenticFlowInputSchema.pick({ prompt: true, imageDataUri: true })},
+  input: {schema: AgenticFlowInputSchema.omit({apiKey: true})},
   output: {schema: AgenticFlowOutputSchema},
   prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
@@ -97,6 +101,23 @@ An image has been provided. Analyze it carefully to inform your plan. For exampl
 {{media url=imageDataUri}}
 {{/if}}
 
+{{#if executionError}}
+**A PREVIOUS ATTEMPT FAILED**
+Your previous plan (shown below) failed with an error. Your task is to analyze the error, formulate a *new* plan to fix it, and achieve the original user request.
+
+**Previous Plan:**
+\`\`\`json
+{{{JSONstringify previousPlan}}}
+\`\`\`
+
+**Execution Error:**
+\`\`\`
+{{{executionError}}}
+\`\`\`
+
+Your new analysis and plan must address this specific error.
+{{/if}}
+
 Based on the request, generate a JSON object that strictly follows the output schema.
 Ensure all file paths are relative. For any new code, provide the complete file content.
 Crucially, the 'content' field for file operations must contain only the raw code, without any markdown formatting like \`\`\`javascript or \`\`\`.
@@ -125,7 +146,7 @@ export const agenticFlow = ai.defineFlow(
       const tempPrompt = executionAi.definePrompt({
         name: 'agenticPrompt_temp', // Different name to avoid conflicts
         model: 'googleai/gemini-2.0-flash', // Explicitly define the model
-        input: { schema: AgenticFlowInputSchema.pick({ prompt: true, imageDataUri: true }) },
+        input: { schema: AgenticFlowInputSchema.omit({apiKey: true}) },
         output: { schema: AgenticFlowOutputSchema },
         prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
@@ -171,19 +192,51 @@ An image has been provided. Analyze it carefully to inform your plan. For exampl
 {{media url=imageDataUri}}
 {{/if}}
 
+{{#if executionError}}
+**A PREVIOUS ATTEMPT FAILED**
+Your previous plan (shown below) failed with an error. Your task is to analyze the error, formulate a *new* plan to fix it, and achieve the original user request.
+
+**Previous Plan:**
+\`\`\`json
+{{{JSONstringify previousPlan}}}
+\`\`\`
+
+**Execution Error:**
+\`\`\`
+{{{executionError}}}
+\`\`\`
+
+Your new analysis and plan must address this specific error.
+{{/if}}
+
 Based on the request, generate a JSON object that strictly follows the output schema.
 Ensure all file paths are relative. For any new code, provide the complete file content.
 Crucially, the 'content' field for file operations must contain only the raw code, without any markdown formatting like \`\`\`javascript or \`\`\`.
 `,
+        helpers: {
+            JSONstringify: (context: any) => JSON.stringify(context, null, 2),
+        }
       });
       
-      const { output } = await tempPrompt({ prompt: input.prompt, imageDataUri: input.imageDataUri });
+      const { output } = await tempPrompt({
+        prompt: input.prompt,
+        imageDataUri: input.imageDataUri,
+        previousPlan: input.previousPlan,
+        executionError: input.executionError,
+      });
       return output!;
 
     } else {
       // Use the globally defined prompt if no specific key is provided.
-      const {output} = await agenticPrompt({ prompt: input.prompt, imageDataUri: input.imageDataUri });
+      const {output} = await agenticPrompt({
+        prompt: input.prompt,
+        imageDataUri: input.imageDataUri,
+        previousPlan: input.previousPlan,
+        executionError: input.executionError,
+      });
       return output!;
     }
   }
 );
+
+    

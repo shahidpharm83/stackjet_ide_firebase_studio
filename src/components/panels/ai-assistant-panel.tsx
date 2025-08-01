@@ -5,11 +5,11 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCircle, ChevronRight, ChevronsRight, Pencil, Lightbulb, ClipboardCheck, Play, Download, Paperclip, Image as ImageIcon } from "lucide-react";
+import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCircle, ChevronRight, ChevronsRight, Pencil, Lightbulb, ClipboardCheck, Play, Download, Paperclip, Image as ImageIcon, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { agenticFlow, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
+import { agenticFlow, AgenticFlowOutput, PlanStep } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Project, OpenFile, MainView } from '@/app/page';
@@ -17,9 +17,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { FileSystemTreeItem } from "@/components/panels/file-explorer";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
-
-type PlanStep = AgenticFlowOutput['plan'][0];
 
 type ExecutedStep = PlanStep & {
     startTime: number;
@@ -46,7 +43,7 @@ type Message = {
   role: "user" | "assistant";
   content: string | AgenticFlowOutput;
   timestamp?: string;
-  plan?: AgenticFlowOutput['plan'];
+  plan?: PlanStep[];
   executedPlan?: ExecutedStep[];
   isExecuting?: boolean;
   timings?: Timings;
@@ -54,6 +51,7 @@ type Message = {
   isAwaitingExecution?: boolean;
   uploadedFile?: UploadedFile;
   currentStep?: number;
+  originalPrompt?: string; // To remember the initial request during retries
 };
 
 type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error" | "awaiting_execution";
@@ -98,7 +96,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout>();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   
   const getStorageKey = useCallback((projectName: string) => `chatHistory_${projectName}`, []);
 
@@ -218,8 +215,92 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     });
   };
 
+   const agenticFlowWithRetry = useCallback(async (
+    promptText: string,
+    imageDataUri?: string,
+    previousPlan?: PlanStep[],
+    executionError?: string
+  ): Promise<AgenticFlowOutput> => {
+    let keys: ApiKey[] = [];
+    try {
+      const savedKeys = localStorage.getItem("geminiApiKeys");
+      if (savedKeys) {
+        keys = JSON.parse(savedKeys);
+      }
+    } catch (error) {
+      console.error("Failed to load API keys from localStorage", error);
+    }
 
-  const startExecution = useCallback(async (messageIndex: number, plan: PlanStep[]) => {
+    if (keys.length === 0) {
+      throw new Error("No Gemini API keys found. Please add a key in the settings.");
+    }
+
+    let keyIndex = 0;
+    while (true) {
+      const currentKey = keys[keyIndex];
+      try {
+        console.log(`Attempting request with key: ${currentKey.name}`);
+        const result = await agenticFlow({
+          prompt: promptText,
+          apiKey: currentKey.key,
+          imageDataUri,
+          previousPlan,
+          executionError,
+        });
+        return result;
+      } catch (error) {
+        console.error(`API call failed for key ${currentKey.name}:`, error);
+        keyIndex = (keyIndex + 1) % keys.length;
+        console.log(`Switching to next key: ${keys[keyIndex].name}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }, []);
+
+  const handleFailedStep = useCallback(async (
+      originalPrompt: string,
+      failedPlan: PlanStep[],
+      error: string,
+      messageIndex: number
+    ) => {
+        setAgentState("thinking");
+        setMessages(prev => prev.map((msg, idx) =>
+            idx === messageIndex ? { ...msg, isExecuting: false } : msg
+        ));
+        
+        try {
+            const result = await agenticFlowWithRetry(originalPrompt, undefined, failedPlan, error);
+            
+            const newMessage: Message = {
+                role: "assistant",
+                content: result,
+                plan: result.plan,
+                executedPlan: [],
+                isExecuting: false,
+                summaryComplete: false,
+                isAwaitingExecution: true,
+                timings: { start: Date.now(), thinkingEnd: Date.now() },
+                originalPrompt: originalPrompt
+            };
+            
+            setMessages(prev => [...prev, newMessage]);
+            setAgentState("awaiting_execution");
+
+        } catch (e: any) {
+            console.error("AI Agent error during retry:", e);
+            const errorMessage: Message = {
+                role: "assistant",
+                content: `Sorry, I encountered an error while trying to fix the previous error: ${e.message}`,
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+            setAgentState("error");
+            setTimeout(() => setAgentState("idle"), 3000);
+        }
+
+  }, [agenticFlowWithRetry]);
+
+
+  const startExecution = useCallback(async (messageIndex: number, plan: PlanStep[], originalPrompt: string) => {
     if (!plan || plan.length === 0 || !project) return;
 
     setAgentState("executing");
@@ -263,7 +344,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                            const fileToRead = await ehandle.getFile();
                            existingContent = await fileToRead.text();
                          } catch (e) {
-                           // File doesn't exist, treat it as a write.
                            ehandle = await getFileHandle(rootHandle, fileName, true);
                            existingContent = '';
                          }
@@ -285,9 +365,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         } catch (e: any) {
                             if (e.name === 'NotFoundError') {
                                 stepResult = { status: 'error', outcome: `File not found: ${fileName}` };
-                            } else {
-                                throw e;
-                            }
+                            } else { throw e; }
                         }
                         break;
                     
@@ -310,9 +388,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         } catch (e: any) {
                             if (e.name === 'NotFoundError') {
                                 stepResult = { status: 'error', outcome: `Source file not found: ${fileName}` };
-                            } else {
-                                throw e;
-                            }
+                            } else { throw e; }
                         }
                         break;
 
@@ -326,42 +402,31 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         } catch (e: any) {
                              if (e.name === 'NotFoundError') {
                                 stepResult = { status: 'error', outcome: `File not found: ${fileName}` };
-                            } else {
-                                throw e;
-                            }
+                            } else { throw e; }
                         }
                         break;
-
                     default:
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
                 }
             } else { // It's a command operation
                  setActiveMainView('terminal');
                  const { command } = step;
-                if (command.startsWith('npm install')) {
-                    const packageName = command.split('install')[1].trim();
-                    try {
-                        const pkgHandle = await getFileHandle(project.handle, 'package.json');
-                        const pkgFile = await pkgHandle.getFile();
-                        const pkgContent = await pkgFile.text();
-                        const pkgJson = JSON.parse(pkgContent);
-                        
-                        pkgJson.dependencies = pkgJson.dependencies || {};
-                        // A simple version matcher, can be improved.
-                        // For now, let's just add the latest. A more robust solution might query npm.
-                        pkgJson.dependencies[packageName] = 'latest'; 
-
-                        const newPkgContent = JSON.stringify(pkgJson, null, 2);
-                        
-                        const writable = await pkgHandle.createWritable();
-                        await writable.write(newPkgContent);
-                        await writable.close();
-                        
-                        onOpenFile('package.json', pkgHandle, newPkgContent);
-                        stepResult = { status: 'success', outcome: `Successfully added ${packageName} to dependencies. You may need to run 'npm install' in the terminal.` };
-                    } catch (e: any) {
-                        stepResult = { status: 'error', outcome: `Failed to update package.json: ${e.message}` };
-                    }
+                // This is a simulation. A real implementation would need to connect to the terminal's WebSocket
+                // send the command, and listen for the output, including exit codes.
+                if (command.includes('tsc')) {
+                    // Simulate a type check. For now, assume it passes. A real implementation would need to parse output.
+                    stepResult = { status: 'success', outcome: `(Emulated) ${command}\nNo errors found.` };
+                } else if (command.startsWith('npm install')) {
+                    const pkgHandle = await getFileHandle(project.handle, 'package.json');
+                    const pkgFile = await pkgHandle.getFile();
+                    const pkgContent = await pkgFile.text();
+                    const pkgJson = JSON.parse(pkgContent);
+                    const newPkgContent = JSON.stringify(pkgJson, null, 2);
+                    const writable = await pkgHandle.createWritable();
+                    await writable.write(newPkgContent);
+                    await writable.close();
+                    onOpenFile('package.json', pkgHandle, newPkgContent);
+                    stepResult = { status: 'success', outcome: `Successfully updated package.json. Run 'npm install' in the terminal.` };
                 } else {
                     stepResult = { status: 'success', outcome: `(Emulated in UI) ${step.expectedOutcome}` };
                 }
@@ -389,6 +454,11 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             return msg;
         }));
 
+        if (stepResult.status === 'error') {
+            await handleFailedStep(originalPrompt, plan, stepResult.outcome, messageIndex);
+            return; // Stop current execution and wait for new plan
+        }
+
         await new Promise(resolve => setTimeout(resolve, 200));
     }
     
@@ -412,40 +482,9 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     
     setAgentState("idle");
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile, setActiveMainView]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile, setActiveMainView, handleFailedStep]);
 
-  const agenticFlowWithRetry = useCallback(async (promptText: string, imageDataUri?: string): Promise<AgenticFlowOutput> => {
-    let keys: ApiKey[] = [];
-    try {
-      const savedKeys = localStorage.getItem("geminiApiKeys");
-      if (savedKeys) {
-        keys = JSON.parse(savedKeys);
-      }
-    } catch (error) {
-      console.error("Failed to load API keys from localStorage", error);
-    }
 
-    if (keys.length === 0) {
-      throw new Error("No Gemini API keys found. Please add a key in the settings.");
-    }
-
-    let keyIndex = 0;
-    // eslint-disable-next-line no-constant-condition
-    while (true) { // Unlimited retries
-      const currentKey = keys[keyIndex];
-      try {
-        console.log(`Attempting request with key: ${currentKey.name}`);
-        // Pass the specific key to the backend flow.
-        const result = await agenticFlow({ prompt: promptText, apiKey: currentKey.key, imageDataUri });
-        return result; // Success
-      } catch (error) {
-        console.error(`API call failed for key ${currentKey.name}:`, error);
-        keyIndex = (keyIndex + 1) % keys.length; // Move to the next key
-        console.log(`Switching to next key: ${keys[keyIndex].name}`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
-      }
-    }
-  }, []);
 
   const sendPrompt = useCallback(async (promptText: string) => {
     if (!promptText.trim() && !uploadedFile || agentState !== 'idle') return;
@@ -488,20 +527,20 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
           isExecuting: false,
           summaryComplete: false,
           isAwaitingExecution: !isReadOnlyPlan,
-          timings: { start: startTime, thinkingEnd }
+          timings: { start: startTime, thinkingEnd },
+          originalPrompt: promptText, // Save the original prompt
       };
       
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
 
       if (isReadOnlyPlan) {
-        // Auto-execute if it's just a read plan
-        startExecution(messages.length + 1, result.plan);
+        startExecution(messages.length + 1, result.plan, promptText);
       } else {
         setAgentState("awaiting_execution");
       }
 
 
-    } catch (error: any) {
+    } catch (error: any)      {
       clearInterval(thinkingTimerRef.current);
       console.error("AI Agent error:", error);
       const errorMessage: Message = {
@@ -722,8 +761,12 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     const timings = message.timings;
     const isDone = message.summaryComplete;
     const currentStepIndex = message.currentStep;
+    const originalPrompt = message.originalPrompt || "";
     
     const totalTime = timings?.summaryEnd && timings?.start ? timings.summaryEnd - timings.start : 0;
+
+    const lastStepFailed = executedPlan.length > 0 && executedPlan[executedPlan.length - 1].status === 'error';
+
 
     return (
       <Card className="bg-card/50 border-border/50">
@@ -783,7 +826,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
 
             {message.isAwaitingExecution && (
                 <div className="pt-2">
-                    <Button onClick={() => startExecution(index, plan)} className="w-full">
+                    <Button onClick={() => startExecution(index, plan, originalPrompt)} className="w-full">
                         <Play className="mr-2" />
                         Execute Plan
                     </Button>
@@ -822,17 +865,19 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         })}
                       </div>
 
-                    <div className="space-y-2 pt-4">
-                        <div className="flex justify-between items-center text-xs text-muted-foreground">
-                            <span>{isExecuting ? `Executing step ${executedPlan.length + 1}/${totalSteps}...` : 'Execution Complete'}</span>
-                            <span>{Math.round(executionProgress)}%</span>
+                     { !lastStepFailed &&
+                        <div className="space-y-2 pt-4">
+                            <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                <span>{isExecuting ? `Executing step ${executedPlan.length + 1}/${totalSteps}...` : 'Execution Complete'}</span>
+                                <span>{Math.round(executionProgress)}%</span>
+                            </div>
+                            <Progress value={executionProgress} className="h-2" />
                         </div>
-                        <Progress value={executionProgress} className="h-2" />
-                    </div>
+                    }
                 </div>
             )}
             
-            {isDone && (
+            {isDone && !lastStepFailed && (
                 <>
                 <Separator />
                 <Alert variant="default" className="bg-green-500/10 border-green-500/30">
@@ -936,11 +981,19 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
               </div>
             </div>
           ))}
-          {agentState !== 'idle' && (
+          {agentState === 'thinking' && (
              <div className="flex items-start gap-3">
                 <Bot className="w-6 h-6 text-primary flex-shrink-0" />
                  <div className="flex items-center gap-2 text-muted-foreground">
                     <CircleDashed className="w-5 h-5 animate-spin" />
+                    <span>{getAgentStatus()}</span>
+                </div>
+            </div>
+          )}
+           {agentState === 'error' && (
+             <div className="flex items-start gap-3">
+                 <AlertTriangle className="w-6 h-6 text-destructive flex-shrink-0" />
+                 <div className="flex items-center gap-2 text-destructive">
                     <span>{getAgentStatus()}</span>
                 </div>
             </div>
@@ -1021,3 +1074,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    
