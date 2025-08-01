@@ -100,7 +100,7 @@ export default function Home() {
               {isTerminalOpen && (
                 <>
                   <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors" />
-                  <Panel defaultSize={25} minSize={10}>
+                  <Panel defaultSize={15} minSize={10}>
                     <TerminalPanel projectOpen={!!project} />
                   </Panel>
                 </>
