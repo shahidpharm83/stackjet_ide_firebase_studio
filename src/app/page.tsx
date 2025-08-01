@@ -10,7 +10,6 @@ import PreviewPanel from "@/components/panels/preview-panel";
 import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { File, Bot } from "lucide-react";
 import TerminalPanel from "@/components/panels/terminal-panel";
 import {
@@ -37,11 +36,13 @@ export interface OpenFile {
   content: string;
 }
 
+type LeftPanel = "files" | "ai";
 
 export default function Home() {
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
+  const [activeLeftPanel, setActiveLeftPanel] = useState<LeftPanel>("files");
   const [rightPanelVisible, setRightPanelVisible] = useState(false);
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
@@ -260,29 +261,22 @@ export default function Home() {
         openProject={openProject}
       />
       <div className="flex flex-1 overflow-hidden">
-        <LeftActivityBar onToggle={() => setLeftPanelVisible(!leftPanelVisible)} />
+        <LeftActivityBar 
+            onToggle={() => setLeftPanelVisible(!leftPanelVisible)} 
+            activePanel={activeLeftPanel}
+            setActivePanel={setActiveLeftPanel}
+        />
         <PanelGroup direction="horizontal" className="flex-1">
           {hydrated && leftPanelVisible && (
             <>
               <Panel defaultSize={20} minSize={15} className="flex flex-col">
-                <Tabs defaultValue="files" className="h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b shrink-0">
-                    <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
-                      <File className="w-4 h-4 mr-2" />
-                      Files
-                    </TabsTrigger>
-                    <TabsTrigger value="ai" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
-                        <Bot className="w-4 h-4 mr-2" />
-                      AI Assistant
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="files" className="flex-1 overflow-y-auto">
+                {activeLeftPanel === 'files' && (
                     <FileExplorer 
                       project={project} 
                       onOpenFile={handleOpenFile}
                     />
-                  </TabsContent>
-                  <TabsContent value="ai" className="flex-1 overflow-hidden" forceMount>
+                )}
+                {activeLeftPanel === 'ai' && (
                     <AiAssistantPanel 
                         project={project} 
                         refreshFileTree={refreshFileTree} 
@@ -290,8 +284,7 @@ export default function Home() {
                         onFileContentChange={handleFileContentChange}
                         getOpenFile={getOpenFile}
                     />
-                  </TabsContent>
-                </Tabs>
+                )}
               </Panel>
               <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
             </>
@@ -334,3 +327,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

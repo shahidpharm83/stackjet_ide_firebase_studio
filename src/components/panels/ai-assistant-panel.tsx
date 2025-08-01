@@ -230,7 +230,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             timings: { ...(msg.timings || { start: Date.now() }), executionStart: Date.now() }
         } : msg
     ));
-
+    
+    let allSteps = [];
     for (const step of plan) {
         const stepStartTime = Date.now();
         let stepResult: { status: 'success' | 'error'; outcome: string };
@@ -243,7 +244,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 switch (action) {
                     case 'write':
                         const whandle = await getFileHandle(rootHandle, fileName, true);
-                        onOpenFile(fileName, whandle, ''); 
+                        if(!getOpenFile(fileName)) onOpenFile(fileName, whandle, ''); 
                         await typeContent(fileName, content, '');
                         stepResult = { status: 'success', outcome: `Wrote ${content.length} bytes to ${fileName}` };
                         break;
@@ -260,7 +261,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                            ehandle = await getFileHandle(rootHandle, fileName, true);
                            existingContent = '';
                          }
-                         onOpenFile(fileName, ehandle, existingContent);
+                         if(!getOpenFile(fileName)) onOpenFile(fileName, ehandle, existingContent);
                          await typeContent(fileName, content, existingContent);
                          stepResult = { status: 'success', outcome: `Edited ${fileName}` };
                          break;
@@ -372,9 +373,11 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             ...stepResult,
         };
         
+        allSteps.push(executedStep);
+
         setMessages(prev => prev.map((msg, idx) => {
             if (idx === messageIndex) {
-                return { ...msg, executedPlan: [...(msg.executedPlan || []), executedStep] };
+                return { ...msg, executedPlan: allSteps };
             }
             return msg;
         }));
@@ -401,7 +404,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     
     setAgentState("idle");
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string, imageDataUri?: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
@@ -896,6 +899,9 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
 
   return (
     <div className="flex flex-col h-full bg-background" onDragOver={handleDragOver} onDrop={handleDrop}>
+       <div className="p-2 flex justify-between items-center border-b border-border h-12 shrink-0">
+          <span className="text-sm font-semibold truncate pl-2 flex items-center gap-2"><Bot className="w-5 h-5 text-primary" /> AI Assistant</span>
+      </div>
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-6">
           {messages.length === 0 && (
@@ -1000,3 +1006,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    

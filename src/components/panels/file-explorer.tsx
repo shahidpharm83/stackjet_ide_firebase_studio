@@ -1,7 +1,7 @@
 
 "use client"
 import React from 'react'
-import { Folder, FileText, ChevronRight } from 'lucide-react';
+import { Folder, FileText, ChevronRight, Briefcase } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -106,8 +106,10 @@ export default function FileExplorer({ project, onOpenFile }: FileExplorerProps)
 
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
-      <div className="p-2 flex justify-between items-center border-b border-border">
-          <span className="text-sm font-semibold truncate pl-2">{project?.name ?? 'File Explorer'}</span>
+      <div className="p-2 flex justify-between items-center border-b border-border h-12">
+          <span className="text-sm font-semibold truncate pl-2 flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-primary" /> {project?.name ?? 'File Explorer'}
+          </span>
       </div>
        <ScrollArea className="flex-1 p-2">
         {project?.tree && project.tree.length > 0 ? (
@@ -122,3 +124,5 @@ export default function FileExplorer({ project, onOpenFile }: FileExplorerProps)
     </aside>
   );
 }
+
+    
