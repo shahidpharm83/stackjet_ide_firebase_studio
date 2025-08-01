@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,11 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
   const [newProjectLocationPath, setNewProjectLocationPath] = useState<string>("");
   const { recentProjects, addRecentProject } = useRecentProjects();
   const { toast } = useToast();
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const handleSelectLocation = async () => {
      try {
@@ -181,7 +186,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
           <TabsContent value="recent" className="mt-4">
              <ScrollArea className="h-72">
                 <div className="pr-4">
-                  {recentProjects.length > 0 ? (
+                  {hydrated && recentProjects.length > 0 ? (
                     <div className="space-y-2">
                         {recentProjects.map((proj, index) => (
                            <div key={index} className="flex items-center justify-between p-2 rounded-md border hover:bg-muted">
