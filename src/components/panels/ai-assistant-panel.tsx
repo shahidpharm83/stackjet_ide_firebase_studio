@@ -355,23 +355,25 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     case 'delete':
                         try {
                             const pathParts = fileName.split('/').filter(p => p);
-                            const fileToDelete = pathParts.pop();
-                            if (!fileToDelete) throw new Error(`Invalid file name for deletion: ${fileName}`);
+                            const entryToDelete = pathParts.pop();
+                            if (!entryToDelete) throw new Error(`Invalid path for deletion: ${fileName}`);
                             
                             const dirPath = pathParts.join('/');
                             const dirHandle = dirPath ? await getDirectoryHandle(rootHandle, dirPath, false) : rootHandle;
-                            await dirHandle.removeEntry(fileToDelete, { recursive: false });
+                            await dirHandle.removeEntry(entryToDelete, { recursive: true });
                             stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         } catch (e: any) {
                             if (e.name === 'NotFoundError') {
-                                stepResult = { status: 'error', outcome: `File not found: ${fileName}` };
+                                stepResult = { status: 'error', outcome: `File or directory not found: ${fileName}` };
                             } else { throw e; }
                         }
                         break;
                     
                     case 'rename':
+                    case 'move':
                         try {
                             const oldHandle = await getFileHandle(rootHandle, fileName);
+                            // It's a file, so move it by copying and deleting.
                             const oldFile = await oldHandle.getFile();
                             const oldContent = await oldFile.text();
                             
@@ -380,11 +382,12 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                             await writableRename.write(oldContent);
                             await writableRename.close();
 
+                            // Remove old file
                             const oldParts = fileName.split('/');
                             const oldName = oldParts.pop()!;
                             const oldDirHandle = await getDirectoryHandle(rootHandle, oldParts.join('/'), false);
                             await oldDirHandle.removeEntry(oldName);
-                            stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${content}` };
+                            stepResult = { status: 'success', outcome: `Renamed/Moved ${fileName} to ${content}` };
                         } catch (e: any) {
                             if (e.name === 'NotFoundError') {
                                 stepResult = { status: 'error', outcome: `Source file not found: ${fileName}` };
@@ -1074,5 +1077,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    
