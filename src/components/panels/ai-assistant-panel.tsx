@@ -25,7 +25,8 @@ type ExecutedStep = PlanStep & {
 type Timings = {
     start: number;
     thinkingEnd?: number;
-    analysisEnd?: number;
+    analysisEnd?: number; // This can be merged with thinkingEnd if analysis is part of it
+    planningEnd?: number;
     executionStart?: number;
     executionEnd?: number;
     summaryEnd?: number;
@@ -163,16 +164,22 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         
         const nextStep = messageToUpdate.content.plan[stepIndex];
         const stepStartTime = Date.now();
-        setMessages(prev => prev.map((msg, idx) => {
-            if (idx === messageIndex) {
-                const newExecutedPlan = [
-                    ...(msg.executedPlan || []), 
-                    {...nextStep, startTime: stepStartTime, endTime: Date.now() }
-                ];
-                return { ...msg, executedPlan: newExecutedPlan };
-            }
-            return msg;
-        }));
+        
+        // Simulate step execution time
+        const stepExecutionTime = 500 + Math.random() * 500;
+
+        setTimeout(() => {
+             setMessages(prev => prev.map((msg, idx) => {
+                if (idx === messageIndex) {
+                    const newExecutedPlan = [
+                        ...(msg.executedPlan || []), 
+                        {...nextStep, startTime: stepStartTime, endTime: Date.now() }
+                    ];
+                    return { ...msg, executedPlan: newExecutedPlan };
+                }
+                return msg;
+            }));
+        }, stepExecutionTime)
         
         stepIndex++;
     }, 800);
@@ -235,9 +242,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       
       clearInterval(thinkingTimerRef.current);
       const thinkingEnd = Date.now();
-
-      setAgentState("analyzing");
-      const analysisEnd = Date.now() + 500; // Simulate analysis time
+      
+      setAgentState("planning");
+      const planningEnd = Date.now() + 500; // Simulate planning time
 
       const assistantMessage: Message = { 
           role: "assistant", 
@@ -245,16 +252,19 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           plan: result.plan,
           executedPlan: [],
           isExecuting: false,
-          timings: { start: startTime, thinkingEnd, analysisEnd }
+          timings: { start: startTime, thinkingEnd, planningEnd }
       };
       
       setMessages((prevMessages) => {
         const newMessages = [...prevMessages, assistantMessage];
         const newAssistantMessageIndex = newMessages.length - 1;
         
+        // Short delay to show the plan before execution starts
         setTimeout(() => {
-            startExecution(newAssistantMessageIndex);
-        }, 1500); // Delay before execution starts
+            if (newMessages[newAssistantMessageIndex]) {
+               startExecution(newAssistantMessageIndex);
+            }
+        }, 1500); 
         
         return newMessages;
       });
@@ -316,6 +326,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   };
   
   const formatTime = (ms: number) => {
+    if (ms < 0) return '0ms';
     if (ms < 1000) return `${ms}ms`;
     return `${(ms / 1000).toFixed(2)}s`;
   }
@@ -352,8 +363,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                     <AlertTitle>Analysis</AlertTitle>
                     {timings?.thinkingEnd && timings.start && (
                         <span className="text-xs text-muted-foreground">
-                            Thinking: {formatTime(timings.thinkingEnd - timings.start)}, 
-                            Analysis: {formatTime((timings.analysisEnd || 0) - timings.thinkingEnd)}
+                            Thinking & Analysis: {formatTime(timings.thinkingEnd - timings.start)}
                         </span>
                     )}
                 </div>
@@ -361,7 +371,14 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             </Alert>
             
             <div>
-              <h3 className="font-semibold flex items-center gap-2 mb-2"><ChevronsRight className="w-5 h-5"/> Execution Plan ({plan.length} steps)</h3>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-semibold flex items-center gap-2"><ChevronsRight className="w-5 h-5"/> Execution Plan ({plan.length} steps)</h3>
+                {timings?.planningEnd && timings.thinkingEnd && (
+                  <span className="text-xs text-muted-foreground">
+                    Planning: {formatTime(timings.planningEnd - timings.thinkingEnd)}
+                  </span>
+                )}
+              </div>
               <div className="space-y-2">
                 {plan.map((step, idx) => {
                   const action = 'action' in step ? step.action : 'command';
@@ -436,6 +453,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                            {timings?.executionEnd && timings.executionStart && (
                              <span>Execution Time: <strong className="text-foreground">{formatTime(timings.executionEnd - timings.executionStart)}</strong></span>
                            )}
+                           {timings?.summaryEnd && timings.executionEnd && (
+                             <span>Summarizing: <strong className="text-foreground">{formatTime(timings.summaryEnd - timings.executionEnd)}</strong></span>
+                           )}
                         </div>
                     </AlertDescription>
                 </Alert>
@@ -480,7 +500,6 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   const getAgentStatus = () => {
     switch (agentState) {
         case 'thinking': return `Thinking... (${thinkingTime}s)`;
-        case 'analyzing': return 'Analyzing request...';
         case 'planning': return 'Creating execution plan...';
         case 'executing': return 'Executing plan...';
         case 'error': return 'An error occurred.';
