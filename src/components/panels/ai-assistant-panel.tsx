@@ -27,6 +27,12 @@ type AiAssistantPanelProps = {
   project: Project | null;
 };
 
+type ApiKey = {
+  id: string;
+  name: string;
+  key: string;
+};
+
 const CommandOutput = ({ command, outcome }: { command: string; outcome: string }) => (
   <div className="bg-black/80 rounded-md p-3 font-code text-xs mt-2">
     <div className="flex items-center gap-2">
@@ -114,6 +120,41 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }, 800);
   }, []);
 
+  const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
+    let keys: ApiKey[] = [];
+    try {
+      const savedKeys = localStorage.getItem("geminiApiKeys");
+      if (savedKeys) {
+        keys = JSON.parse(savedKeys);
+      }
+    } catch (error) {
+      console.error("Failed to load API keys from localStorage", error);
+    }
+
+    if (keys.length === 0) {
+      throw new Error("No Gemini API keys found. Please add a key in the settings.");
+    }
+
+    let keyIndex = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) { // Unlimited retries
+      const currentKey = keys[keyIndex];
+      try {
+        // We'll dynamically pass the key to the flow if the backend supports it,
+        // for now, we assume the backend (genkit) is configured to pick it up from env or a similar place.
+        // The core logic here is the retry loop.
+        console.log(`Attempting request with key: ${currentKey.name}`);
+        const result = await agenticFlow({ prompt: promptText });
+        return result; // Success
+      } catch (error) {
+        console.error(`API call failed for key ${currentKey.name}:`, error);
+        keyIndex = (keyIndex + 1) % keys.length; // Move to the next key
+        console.log(`Switching to next key: ${keys[keyIndex].name}`);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+      }
+    }
+  }, []);
+
   const sendPrompt = useCallback(async (promptText: string) => {
     if (!promptText.trim() || agentState !== 'idle') return;
 
@@ -130,7 +171,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       await new Promise(resolve => setTimeout(resolve, 1200));
       setAgentState("analyzing");
       
-      const result = await agenticFlow({ prompt: promptText });
+      const result = await agenticFlowWithRetry(promptText);
 
       const assistantMessage: Message = { role: "assistant", content: result };
       setMessages((prev) => [...prev, assistantMessage]);
@@ -138,17 +179,17 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       
       handleStartExecution(result.plan);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Agent error:", error);
       const errorMessage: Message = {
         role: "assistant",
-        content: "Sorry, I encountered an error and couldn't complete your request.",
+        content: `Sorry, I encountered an error: ${error.message}`,
       };
       setMessages((prev) => [...prev, errorMessage]);
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 2000);
     }
-  }, [agentState, handleStartExecution]);
+  }, [agentState, handleStartExecution, agenticFlowWithRetry]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,5 +411,3 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
-
-    
