@@ -67,7 +67,7 @@ export default function MainPanel({
         </TabsList>
 
         {openFiles.map(file => (
-          <TabsContent key={file.path} value={file.path} className="flex-1 overflow-auto mt-0">
+          <TabsContent key={`content-${file.path}`} value={file.path} className="flex-1 mt-0">
             <EditorPanel 
                 file={file}
                 onContentChange={(newContent) => onFileContentChange(file.path, newContent)}
