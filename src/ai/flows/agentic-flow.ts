@@ -57,7 +57,7 @@ Your task is to understand a user's request, break it down into a sequence of op
 **Your Process:**
 1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process.
 2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'.
-3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed and operations to be performed.
+3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**

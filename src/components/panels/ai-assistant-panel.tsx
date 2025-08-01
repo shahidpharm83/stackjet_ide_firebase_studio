@@ -125,7 +125,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setMessages((prev) => [...prev, assistantMessage]);
       setAgentState("planning");
       
-      setTimeout(() => handleStartExecution(result.plan), 1000);
+      // Automatically start execution
+      handleStartExecution(result.plan);
 
     } catch (error) {
       console.error("AI Agent error:", error);
@@ -155,10 +156,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       case 'rename':
       case 'move':
         return <ChevronsRight className="w-4 h-4 text-yellow-400" />;
-      case 'command':
+      default: // Catches 'command' and any other case
         return <Terminal className="w-4 h-4 text-green-400" />;
-      default:
-        return <ChevronRight className="w-4 h-4" />;
     }
   };
 
@@ -188,20 +187,23 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             <div>
               <h3 className="font-semibold flex items-center gap-2 mb-2"><ChevronsRight className="w-5 h-5"/> Execution Plan</h3>
               <div className="space-y-2">
-                {response.plan.map((step, index) => (
-                  <div key={index} className={`p-3 rounded-md text-sm transition-all duration-300 ${isExecutingOrDone && index < executedSteps ? 'bg-green-500/10 border-l-4 border-green-500' : 'bg-muted/50 border-l-4 border-transparent'}`}>
-                    <div className="flex items-center gap-3">
-                      {isExecutingOrDone && index < executedSteps ? <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{index + 1}</div>}
-                      {renderStepIcon('action' in step ? step.action : 'command')}
-                      <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
-                      <Badge variant="outline" className="text-xs">{ 'action' in step ? step.action : 'command' }</Badge>
+                {response.plan.map((step, index) => {
+                  const action = 'action' in step ? step.action : 'command';
+                  return (
+                    <div key={index} className={`p-3 rounded-md text-sm transition-all duration-300 ${isExecutingOrDone && index < executedSteps ? 'bg-green-500/10 border-l-4 border-green-500' : 'bg-muted/50 border-l-4 border-transparent'}`}>
+                      <div className="flex items-center gap-3">
+                        {isExecutingOrDone && index < executedSteps ? <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{index + 1}</div>}
+                        {renderStepIcon(action)}
+                        <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
+                        <Badge variant="outline" className="text-xs capitalize">{action}</Badge>
+                      </div>
+                      <div className="mt-2 pl-7 text-xs space-y-1 text-muted-foreground">
+                        <p><strong className="font-medium text-foreground/90">Purpose:</strong> {step.purpose}</p>
+                        <p><strong className="font-medium text-foreground/90">Outcome:</strong> {step.expectedOutcome}</p>
+                      </div>
                     </div>
-                    <div className="mt-2 pl-7 text-xs space-y-1 text-muted-foreground">
-                      <p><strong className="font-medium text-foreground/90">Purpose:</strong> {step.purpose}</p>
-                      <p><strong className="font-medium text-foreground/90">Outcome:</strong> {step.expectedOutcome}</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -223,7 +225,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                     <AlertTitle>Summary</AlertTitle>
                     <AlertDescription>
                         {response.summary}
-                        <div className="flex items-center gap-4 mt-2 text-xs">
+                         <div className="flex items-center gap-4 mt-2 text-xs">
                            <span><strong className="text-foreground">{successfulSteps}</strong> successful steps</span>
                            <span><strong className="text-foreground">0</strong> errors</span>
                         </div>
@@ -302,27 +304,29 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         </div>
       </ScrollArea>
       <div className="p-4 border-t border-border shrink-0">
-        <form onSubmit={handleSubmit} className="relative">
-          <Textarea
-            placeholder="Prompt Stacky to build, test, or refactor..."
-            className="pr-20 min-h-[60px] resize-none"
-            disabled={agentState !== 'idle'}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
-          <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
-            <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
-              <Mic className="w-5 h-5" />
-            </Button>
-            <Button type="button" size="icon" disabled={agentState !== 'idle' || !input.trim()} onClick={() => sendPrompt(input)}>
-              <Send className="w-5 h-5" />
-            </Button>
+        <form onSubmit={handleSubmit}>
+          <div className="relative">
+            <Textarea
+              placeholder="Prompt Stacky to build, test, or refactor..."
+              className="pr-20 min-h-[60px] resize-none"
+              disabled={agentState !== 'idle'}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+            <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
+              <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
+                <Mic className="w-5 h-5" />
+              </Button>
+              <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()}>
+                <Send className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
         </form>
       </div>
