@@ -85,11 +85,6 @@ export default function FileExplorer({ project, onOpenFolder }: FileExplorerProp
     <aside className="w-full h-full flex flex-col shrink-0">
       <div className="p-2 flex justify-between items-center border-b border-border">
           <span className="text-sm font-semibold truncate pl-2">{project?.name ?? 'File Explorer'}</span>
-          <div>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onOpenFolder} title="Open Folder">
-              <FolderOpen className="w-4 h-4" />
-            </Button>
-          </div>
       </div>
        <ScrollArea className="flex-1 p-2">
         {project?.tree && project.tree.length > 0 ? (

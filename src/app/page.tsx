@@ -62,7 +62,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
-      <Header project={project} onCloseProject={handleCloseProject} />
+      <Header project={project} onCloseProject={handleCloseProject} onOpenFolder={handleOpenFolder} />
       <div className="flex flex-1 overflow-hidden">
         <LeftActivityBar onToggle={() => setLeftPanelVisible(!leftPanelVisible)} />
         <PanelGroup direction="horizontal">
