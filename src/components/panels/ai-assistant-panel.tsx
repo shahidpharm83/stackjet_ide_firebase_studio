@@ -164,8 +164,10 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     return new Promise(resolve => {
         const openFile = getOpenFile(filePath);
         if (!openFile) {
-            onOpenFile(filePath, {} as FileSystemFileHandle, initialContent); // We might not have a handle yet, so pass a dummy
+            // It's a new file, open it first.
+             handleOpenFileWithContent(filePath, content);
         }
+        
         let currentContent = initialContent;
         const lines = content.split('\n');
         let lineIndex = 0;
@@ -183,6 +185,17 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         typeLine();
     });
   };
+
+  const handleOpenFileWithContent = async (path: string, content: string) => {
+    if (!project) return;
+    try {
+        const handle = await getFileHandle(project.handle, path, true);
+        onOpenFile(path, handle, content);
+    } catch (error) {
+        console.error(`Error opening file ${path} with content:`, error);
+    }
+  }
+
 
   const startExecution = useCallback(async (messageIndex: number, plan: PlanStep[]) => {
     if (!plan || plan.length === 0 || !project) return;
@@ -273,7 +286,34 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
                 }
             } else { // It's a command operation
-                stepResult = { status: 'success', outcome: `(Emulated) ${step.expectedOutcome}` };
+                 const { command } = step;
+                if (command.startsWith('npm install')) {
+                    const packageName = command.split('install')[1].trim();
+                    try {
+                        const pkgHandle = await getFileHandle(project.handle, 'package.json');
+                        const pkgFile = await pkgHandle.getFile();
+                        const pkgContent = await pkgFile.text();
+                        const pkgJson = JSON.parse(pkgContent);
+                        
+                        pkgJson.dependencies = pkgJson.dependencies || {};
+                        // A simple version matcher, can be improved.
+                        // For now, let's just add the latest. A more robust solution might query npm.
+                        pkgJson.dependencies[packageName] = 'latest'; 
+
+                        const newPkgContent = JSON.stringify(pkgJson, null, 2);
+                        
+                        const writable = await pkgHandle.createWritable();
+                        await writable.write(newPkgContent);
+                        await writable.close();
+                        
+                        onOpenFile('package.json', pkgHandle, newPkgContent);
+                        stepResult = { status: 'success', outcome: `Successfully added ${packageName} to dependencies.` };
+                    } catch (e: any) {
+                        stepResult = { status: 'error', outcome: `Failed to update package.json: ${e.message}` };
+                    }
+                } else {
+                    stepResult = { status: 'success', outcome: `(Emulated) ${step.expectedOutcome}` };
+                }
             }
         } catch (error: any) {
             console.error(`Execution failed for step:`, step, error);
@@ -318,7 +358,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     
     setAgentState("idle");
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile, handleOpenFileWithContent]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
@@ -708,5 +748,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    
