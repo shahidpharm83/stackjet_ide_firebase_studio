@@ -116,18 +116,32 @@ export default function Home() {
 
 
   const handleCloseFile = (path: string) => {
-    setOpenFiles(prev => prev.filter(f => f.path !== path));
-    if (activeFile === path) {
-      setActiveFile(prev => {
-          const remainingFiles = openFiles.filter(f => f.path !== path);
-          return remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1].path : null;
-      });
-    }
+    setOpenFiles(prev => {
+        const remainingFiles = prev.filter(f => f.path !== path);
+        if (activeFile === path) {
+            const newActivePath = remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1].path : null;
+            setActiveFile(newActivePath);
+            if (newActivePath === null && activeMainView === 'editor') {
+                // If no files are left, but we were in editor view, decide what to do.
+                // Maybe switch to terminal or show a placeholder. For now, just clear active file.
+            }
+        }
+        return remainingFiles;
+    });
   };
   
   const handleActiveFileChange = (path: string) => {
     setActiveFile(path);
     setActiveMainView('editor');
+  };
+
+  const handleViewChange = (view: string) => {
+    if (view === 'terminal') {
+      setActiveMainView('terminal');
+    } else {
+      setActiveFile(view);
+      setActiveMainView('editor');
+    }
   };
   
   const handleFileContentChange = useCallback((path: string, newContent: string) => {
@@ -298,21 +312,16 @@ export default function Home() {
             </>
           )}
           <Panel>
-            <PanelGroup direction="vertical">
-              <Panel className="flex-1">
-                <MainPanel 
+             <MainPanel 
                   openFiles={openFiles} 
                   activeFile={activeFile}
                   onCloseFile={handleCloseFile}
-                  onActiveFileChange={handleActiveFileChange}
+                  onViewChange={handleViewChange}
                   onFileContentChange={handleFileContentChange}
                   isExecuting={isExecuting}
                   projectOpen={!!project}
                   activeMainView={activeMainView}
-                  setActiveMainView={setActiveMainView}
                 />
-              </Panel>
-            </PanelGroup>
           </Panel>
           {rightPanelVisible && (
             <>
@@ -325,7 +334,7 @@ export default function Home() {
         </PanelGroup>
         <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
       </div>
-      <StatusBar onToggleTerminal={() => setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal')} />
+       <StatusBar onToggleTerminal={() => setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal')} />
     </div>
   );
 }

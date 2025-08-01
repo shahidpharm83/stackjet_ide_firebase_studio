@@ -13,60 +13,35 @@ type MainPanelProps = {
   openFiles: OpenFile[];
   activeFile: string | null;
   onCloseFile: (path: string) => void;
-  onActiveFileChange: (path: string) => void;
+  onViewChange: (view: string) => void;
   onFileContentChange: (path: string, newContent: string) => void;
   isExecuting: boolean;
   projectOpen: boolean;
   activeMainView: MainView;
-  setActiveMainView: (view: MainView) => void;
 };
 
 export default function MainPanel({ 
   openFiles, 
   activeFile, 
   onCloseFile, 
-  onActiveFileChange,
+  onViewChange,
   onFileContentChange,
   isExecuting,
   projectOpen,
   activeMainView,
-  setActiveMainView
 }: MainPanelProps) {
   
-  const [hydrated, setHydrated] = useState(false);
   const noFilesOpen = openFiles.length === 0;
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  const handleTabChange = (value: string) => {
-    if (value === 'terminal') {
-      setActiveMainView('terminal');
-    } else {
-      setActiveMainView('editor');
-      onActiveFileChange(value);
-    }
-  }
-  
   // Determine the active tab value. If the main view is terminal, it's 'terminal'.
-  // Otherwise, it's the active file path. If no file is active but the view is editor, default to empty string.
-  const activeTabValue = activeMainView === 'terminal' ? 'terminal' : activeFile || "";
+  // Otherwise, it's the active file path.
+  const activeTabValue = activeMainView === 'terminal' ? 'terminal' : activeFile || '';
 
   if (!projectOpen) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
         <Code className="w-16 h-16 mb-4" />
         <p>Open a project to start working.</p>
-      </div>
-    );
-  }
-
-  if (!hydrated) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
-        <Code className="w-16 h-16 mb-4" />
-        <p>Loading editor...</p>
       </div>
     );
   }
@@ -80,7 +55,7 @@ export default function MainPanel({
               <p className="text-xs">Select a file from the explorer to begin editing.</p>
             </div>
         ) : (
-          <Tabs value={activeTabValue} onValueChange={handleTabChange} className="flex-1 flex flex-col h-full">
+          <Tabs value={activeTabValue} onValueChange={onViewChange} className="flex-1 flex flex-col h-full">
             <TabsList className="flex-shrink-0 h-12 p-0 border-b rounded-none justify-start bg-background">
               {openFiles.map(file => (
                 <TabsTrigger 
@@ -112,7 +87,7 @@ export default function MainPanel({
             </TabsList>
 
             {openFiles.map(file => (
-              <TabsContent key={`content-${file.path}`} value={file.path} className="flex-1 mt-0">
+              <TabsContent key={`content-${file.path}`} value={file.path} className="flex-1 mt-0 bg-background">
                 <EditorPanel 
                     file={file}
                     onContentChange={(newContent) => onFileContentChange(file.path, newContent)}
