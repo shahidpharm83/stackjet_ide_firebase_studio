@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useState } from "react";
-import { Play, Settings, Sparkles, Bot, X, FolderOpen, Download, CircleDashed } from "lucide-react";
+import { Play, Settings, Bot, X, FolderOpen, Download, CircleDashed, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
+import ProjectModal from "@/components/modals/project-modal";
 import type { Project } from '@/app/page';
 import {
   DropdownMenu,
@@ -18,10 +20,22 @@ type HeaderProps = {
   onOpenFolder: () => void;
   onDownloadProject: () => void;
   isDownloading: boolean;
+  isProjectModalOpen: boolean;
+  onProjectModalOpenChange: (isOpen: boolean) => void;
+  openProject: (handle: FileSystemDirectoryHandle) => void;
 };
 
-export default function Header({ project, onCloseProject, onOpenFolder, onDownloadProject, isDownloading }: HeaderProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+export default function Header({ 
+  project, 
+  onCloseProject, 
+  onOpenFolder, 
+  onDownloadProject, 
+  isDownloading,
+  isProjectModalOpen,
+  onProjectModalOpenChange,
+  openProject,
+}: HeaderProps) {
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   return (
     <>
@@ -33,14 +47,16 @@ export default function Header({ project, onCloseProject, onOpenFolder, onDownlo
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <FolderOpen className="h-4 w-4" />
-              </Button>
+               <Button variant="ghost">File</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={onOpenFolder}>
+                <FileIcon className="mr-2" />
+                New Project...
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpenFolder}>
                 <FolderOpen className="mr-2" />
-                Open Folder
+                Open Folder...
               </DropdownMenuItem>
               {project && (
                  <DropdownMenuItem onClick={onCloseProject}>
@@ -70,12 +86,17 @@ export default function Header({ project, onCloseProject, onOpenFolder, onDownlo
             <Play />
             Run
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(true)}>
+          <Button variant="ghost" size="icon" onClick={() => setIsApiKeyModalOpen(true)}>
             <Settings className="h-4 w-4" />
           </Button>
         </div>
       </header>
-      <ApiKeyModal isOpen={isModalOpen} onOpenChange={setIsModalOpen} />
+      <ApiKeyModal isOpen={isApiKeyModalOpen} onOpenChange={setIsApiKeyModalOpen} />
+      <ProjectModal 
+        isOpen={isProjectModalOpen} 
+        onOpenChange={onProjectModalOpenChange}
+        openProject={openProject}
+      />
     </>
   );
 }

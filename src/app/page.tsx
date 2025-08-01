@@ -46,6 +46,7 @@ export default function Home() {
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -131,19 +132,24 @@ export default function Home() {
     return openFiles.find(f => f.path === path);
   }, [openFiles]);
 
+  const openProject = useCallback(async (handle: FileSystemDirectoryHandle) => {
+    const tree = await getDirectoryTree(handle);
+    setProject({
+        name: handle.name,
+        handle,
+        tree
+    });
+    setOpenFiles([]);
+    setActiveFile(null);
+    setIsProjectModalOpen(false);
+  }, []);
+
 
   const handleOpenFolder = useCallback(async () => {
     try {
       if ('showDirectoryPicker' in window) {
         const directoryHandle = await (window as any).showDirectoryPicker();
-        const tree = await getDirectoryTree(directoryHandle);
-        setProject({
-          name: directoryHandle.name,
-          handle: directoryHandle,
-          tree: tree
-        });
-        setOpenFiles([]);
-        setActiveFile(null);
+        openProject(directoryHandle);
       } else {
         alert('Your browser does not support the File System Access API.');
       }
@@ -158,7 +164,7 @@ export default function Home() {
         console.error('Error opening directory:', error);
       }
     }
-  }, []);
+  }, [openProject]);
 
   const handleCloseProject = () => {
     setProject(null);
@@ -247,9 +253,12 @@ export default function Home() {
       <Header 
         project={project} 
         onCloseProject={handleCloseProject} 
-        onOpenFolder={handleOpenFolder}
+        onOpenFolder={() => setIsProjectModalOpen(true)}
         onDownloadProject={handleDownloadProject}
         isDownloading={isExecuting}
+        isProjectModalOpen={isProjectModalOpen}
+        onProjectModalOpenChange={setIsProjectModalOpen}
+        openProject={openProject}
       />
       <div className="flex flex-1 overflow-hidden">
         <LeftActivityBar onToggle={() => setLeftPanelVisible(!leftPanelVisible)} />
