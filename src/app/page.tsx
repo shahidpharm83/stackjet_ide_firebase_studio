@@ -36,7 +36,7 @@ export interface OpenFile {
 }
 
 type LeftPanel = "files" | "ai";
-export type MainView = "editor";
+export type MainView = "editor" | "terminal";
 
 
 export default function Home() {
@@ -250,6 +250,10 @@ export default function Home() {
         setIsExecuting(false);
     }
   };
+
+  const toggleTerminal = () => {
+    setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal');
+  }
   
   if (!hydrated) {
     return null;
@@ -309,6 +313,8 @@ export default function Home() {
                   isExecuting={isExecuting}
                   hydrated={hydrated}
                   projectOpen={!!project}
+                  activeMainView={activeMainView}
+                  setActiveMainView={setActiveMainView}
                 />
               </Panel>
             </PanelGroup>
@@ -324,7 +330,7 @@ export default function Home() {
         </PanelGroup>
         <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
       </div>
-      <StatusBar />
+      <StatusBar onToggleTerminal={toggleTerminal} />
     </div>
   );
 }

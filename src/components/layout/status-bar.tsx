@@ -4,12 +4,19 @@
 import { Button } from "@/components/ui/button";
 import { Terminal } from 'lucide-react';
 
-export default function StatusBar() {
+type StatusBarProps = {
+  onToggleTerminal: () => void;
+};
+
+export default function StatusBar({ onToggleTerminal }: StatusBarProps) {
 
   return (
     <div className="h-8 border-t border-border flex items-center px-4 justify-between text-sm">
       <div className="flex items-center gap-4">
-         {/* Terminal button can be re-added here if functionality is restored */}
+         <Button variant="ghost" size="sm" className="h-full" onClick={onToggleTerminal}>
+            <Terminal />
+            Terminal
+         </Button>
       </div>
       <div className="flex items-center gap-4">
         <span>Ln 1, Col 1</span>

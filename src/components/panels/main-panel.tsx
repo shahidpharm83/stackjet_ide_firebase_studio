@@ -1,7 +1,12 @@
+
+import dynamic from 'next/dynamic';
 import EditorPanel from "./editor-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Code } from "lucide-react";
-import type { OpenFile } from "@/app/page";
+import { X, Code, Terminal as TerminalIcon } from "lucide-react";
+import type { OpenFile, MainView } from "@/app/page";
+import { cn } from "@/lib/utils";
+
+const TerminalPanel = dynamic(() => import("./terminal-panel"), { ssr: false });
 
 type MainPanelProps = {
   openFiles: OpenFile[];
@@ -12,6 +17,8 @@ type MainPanelProps = {
   isExecuting: boolean;
   hydrated: boolean;
   projectOpen: boolean;
+  activeMainView: MainView;
+  setActiveMainView: (view: MainView) => void;
 };
 
 export default function MainPanel({ 
@@ -23,20 +30,34 @@ export default function MainPanel({
   isExecuting,
   hydrated,
   projectOpen,
+  activeMainView,
+  setActiveMainView
 }: MainPanelProps) {
   
   const noFilesOpen = openFiles.length === 0;
+  const isTerminalActive = activeMainView === 'terminal';
+
+  const handleTabChange = (value: string) => {
+    if (value === 'terminal') {
+      setActiveMainView('terminal');
+    } else {
+      setActiveMainView('editor');
+      onActiveFileChange(value);
+    }
+  }
+
+  const activeValue = isTerminalActive ? "terminal" : activeFile || "";
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden h-full">
-      {noFilesOpen ? (
+      {noFilesOpen && !isTerminalActive ? (
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
           <Code className="w-16 h-16 mb-4" />
           <p>No files are open.</p>
           <p className="text-xs">Select a file from the explorer to begin editing.</p>
         </div>
       ) : (
-        <Tabs value={activeFile || ""} onValueChange={onActiveFileChange} className="flex-1 flex flex-col">
+        <Tabs value={activeValue} onValueChange={handleTabChange} className="flex-1 flex flex-col">
           <TabsList className="flex-shrink-0 h-12 p-0 border-b rounded-none justify-start bg-background">
             {openFiles.map(file => (
               <TabsTrigger 
@@ -58,6 +79,16 @@ export default function MainPanel({
                 </div>
               </TabsTrigger>
             ))}
+             <TabsTrigger 
+                value="terminal"
+                className={cn(
+                    "h-full rounded-none relative data-[state=active]:bg-muted data-[state=active]:shadow-none",
+                    projectOpen && "flex items-center gap-2"
+                )}
+             >
+                <TerminalIcon />
+                Terminal
+            </TabsTrigger>
           </TabsList>
 
           {openFiles.map(file => (
@@ -69,6 +100,9 @@ export default function MainPanel({
               />
             </TabsContent>
           ))}
+          <TabsContent value="terminal" className="flex-1 mt-0 bg-background">
+              <TerminalPanel projectOpen={projectOpen} />
+          </TabsContent>
         </Tabs>
       )}
     </div>
