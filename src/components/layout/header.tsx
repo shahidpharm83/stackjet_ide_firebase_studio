@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Settings, Sparkles, Bot, X, FolderOpen } from "lucide-react";
+import { Play, Settings, Sparkles, Bot, X, FolderOpen, Download, CircleDashed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
 import type { Project } from '@/app/page';
@@ -16,9 +16,11 @@ type HeaderProps = {
   project: Project | null;
   onCloseProject: () => void;
   onOpenFolder: () => void;
+  onDownloadProject: () => void;
+  isDownloading: boolean;
 };
 
-export default function Header({ project, onCloseProject, onOpenFolder }: HeaderProps) {
+export default function Header({ project, onCloseProject, onOpenFolder, onDownloadProject, isDownloading }: HeaderProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -60,6 +62,10 @@ export default function Header({ project, onCloseProject, onOpenFolder }: Header
         )}
 
         <div className="flex items-center gap-2">
+           <Button variant="ghost" size="sm" disabled={!project || isDownloading} onClick={onDownloadProject}>
+            {isDownloading ? <CircleDashed className="animate-spin" /> : <Download />}
+            Download
+          </Button>
           <Button variant="ghost" size="sm" disabled={!project}>
             <Play />
             Run

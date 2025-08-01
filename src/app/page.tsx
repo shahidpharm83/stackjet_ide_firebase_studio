@@ -11,13 +11,16 @@ import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { File, Bot } from "lucide-react";
+import { File, Bot, Download } from "lucide-react";
 import TerminalPanel from "@/components/panels/terminal-panel";
 import {
   PanelGroup,
   Panel,
   PanelResizeHandle,
 } from "react-resizable-panels";
+import JSZip from 'jszip';
+import { useToast } from "@/hooks/use-toast";
+import { agenticFlow, AgenticFlowInput, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
 
 
 export interface Project {
@@ -43,11 +46,24 @@ export default function Home() {
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setHydrated(true);
   }, []);
 
+  const getFileHandle = async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemFileHandle> => {
+      const parts = path.split('/');
+      const fileName = parts.pop();
+      if (!fileName) throw new Error('Invalid file path');
+      
+      let currentHandle: FileSystemDirectoryHandle = root;
+      for (const part of parts) {
+          currentHandle = await currentHandle.getDirectoryHandle(part, { create });
+      }
+      
+      return await currentHandle.getFileHandle(fileName, { create });
+  };
 
   const refreshFileTree = useCallback(async () => {
     if (project?.handle) {
@@ -150,9 +166,91 @@ export default function Home() {
     setActiveFile(null);
   };
 
+  const addFilesToZip = async (zip: JSZip, dirHandle: FileSystemDirectoryHandle, path: string = '') => {
+    for await (const [name, handle] of dirHandle.entries()) {
+      const newPath = path ? `${path}/${name}` : name;
+      if (handle.kind === 'file') {
+        const file = await handle.getFile();
+        zip.file(newPath, file);
+      } else if (handle.kind === 'directory') {
+        await addFilesToZip(zip, handle, newPath);
+      }
+    }
+  };
+
+  const handleDownloadProject = async () => {
+    if (!project) return;
+    toast({
+      title: "Preparing Project Download",
+      description: "First, the AI is updating your README...",
+    });
+
+    try {
+        setIsExecuting(true);
+        // Step 1: Have AI update or create README.md
+        const readmePrompt = `Analyze the project structure and create or update the README.md file. It should include a brief project description, setup instructions, and how to run the application. Files to read to get context: ${project.tree.filter(f => f.name === 'package.json' || f.name.includes('config')).map(f => f.path).join(', ')}`;
+        
+        const result = await agenticFlow({ prompt: readmePrompt });
+
+        const readmeStep = result.plan.find(step => 'fileName' in step && step.fileName === 'README.md');
+
+        if (readmeStep && 'fileName' in readmeStep && readmeStep.content) {
+            const handle = await getFileHandle(project.handle, 'README.md', true);
+            const writable = await handle.createWritable();
+            await writable.write(readmeStep.content);
+            await writable.close();
+            await refreshFileTree();
+            toast({
+              title: "README Updated",
+              description: "Now zipping the project files.",
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "README Generation Failed",
+                description: "The AI could not generate a README.md file. Proceeding with zipping.",
+            });
+        }
+
+        // Step 2: Zip the project
+        const zip = new JSZip();
+        await addFilesToZip(zip, project.handle);
+        
+        const content = await zip.generateAsync({type:"blob"});
+        
+        // Step 3: Trigger download
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `${project.name}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+         toast({
+          title: "Download Started!",
+          description: "Your project is being downloaded as a zip file.",
+        });
+    } catch (error: any) {
+        console.error("Failed to download project:", error);
+        toast({
+            variant: "destructive",
+            title: "Download Failed",
+            description: error.message,
+        });
+    } finally {
+        setIsExecuting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
-      <Header project={project} onCloseProject={handleCloseProject} onOpenFolder={handleOpenFolder} />
+      <Header 
+        project={project} 
+        onCloseProject={handleCloseProject} 
+        onOpenFolder={handleOpenFolder}
+        onDownloadProject={handleDownloadProject}
+        isDownloading={isExecuting}
+      />
       <div className="flex flex-1 overflow-hidden">
         <LeftActivityBar onToggle={() => setLeftPanelVisible(!leftPanelVisible)} />
         <PanelGroup direction="horizontal" className="flex-1">
