@@ -5,7 +5,7 @@
  * - testApiKey - A function that takes an API key and performs a test call.
  */
 
-import { genkit, generation, z } from 'genkit';
+import { genkit, z } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 export const testApiKeyFlow = genkit.defineFlow(
@@ -27,7 +27,7 @@ export const testApiKeyFlow = genkit.defineFlow(
 
       // Make a simple, low-cost call to the model
       const llm = testAi.model('googleai/gemini-2.0-flash');
-      const response = await generation.generate({
+      const response = await testAi.generate({
         model: llm,
         prompt: 'Give me a one-word response.',
         config: {
