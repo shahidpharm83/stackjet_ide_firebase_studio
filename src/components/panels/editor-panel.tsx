@@ -27,8 +27,10 @@ export default HelloWorld;
 // A simple syntax highlighter for demonstration
 function SyntaxHighlighter({ code }: { code: string }) {
   const highlight = (line: string) => {
-    return line
-      .replace(/</g, '&lt;')
+    // Escape HTML entities first to prevent conflicts with syntax highlighting spans
+    const escapedLine = line.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    return escapedLine
       .replace(
         /\b(import|from|function|const|if|return|export|default)\b/g,
         '<span class="text-fuchsia-400">$&</span>'
