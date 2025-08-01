@@ -28,9 +28,9 @@ export default HelloWorld;
 function SyntaxHighlighter({ code }: { code: string }) {
   const highlight = (line: string) => {
     // Escape HTML entities first to prevent conflicts with syntax highlighting spans
-    const escapedLine = line.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    let escapedLine = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    return escapedLine
+    escapedLine = escapedLine
       .replace(
         /\b(import|from|function|const|if|return|export|default)\b/g,
         '<span class="text-fuchsia-400">$&</span>'
@@ -45,6 +45,8 @@ function SyntaxHighlighter({ code }: { code: string }) {
         /(&lt;h1.*?&gt;|&lt;\/h1&gt;)/g,
         '<span class="text-gray-400">$&</span>'
       );
+    
+    return escapedLine;
   };
   
   const lineWithError = '  const b = 2; // Potential error here';
