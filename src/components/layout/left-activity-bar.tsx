@@ -10,11 +10,11 @@ export default function LeftActivityBar() {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col items-center gap-4 p-2 border-r border-border bg-background">
+      <div className="flex flex-col items-center gap-4 p-1 border-r border-border bg-background" style={{ width: '25px' }}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => toggleSidebar()}>
-              <File className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={() => toggleSidebar()} className="h-6 w-6">
+              <File className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">
@@ -23,8 +23,8 @@ export default function LeftActivityBar() {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={() => toggleSidebar()}>
-              <Bot className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={() => toggleSidebar()} className="h-6 w-6">
+              <Bot className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right">

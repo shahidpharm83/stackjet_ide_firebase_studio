@@ -10,11 +10,11 @@ export default function RightActivityBar() {
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col items-center gap-4 p-2 border-l border-border bg-background">
+      <div className="flex flex-col items-center gap-4 p-1 border-l border-border bg-background" style={{ width: '25px' }}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-              <Eye className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-6 w-6">
+              <Eye className="w-4 h-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="left">
