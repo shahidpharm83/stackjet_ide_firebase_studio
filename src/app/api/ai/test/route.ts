@@ -15,10 +15,13 @@ export async function POST(req: NextRequest) {
     if (isSuccess) {
       return NextResponse.json({ success: true });
     } else {
-      return NextResponse.json({ error: 'The provided API key is invalid or has insufficient permissions.' }, { status: 401 });
+      // This case is now handled by the error catching below, 
+      // but we leave it for clarity. The flow itself returns false.
+      return NextResponse.json({ error: 'The provided API key is invalid or has insufficient permissions.' }, { status: 400 });
     }
   } catch (error: any) {
     console.error('/api/ai/test error:', error);
-    return NextResponse.json({ error: error.message || 'An unexpected error occurred.' }, { status: 500 });
+    // The Genkit run will throw an error for invalid keys, which we catch here.
+    return NextResponse.json({ error: error.message || 'The provided API key is invalid or has insufficient permissions.' }, { status: 400 });
   }
 }

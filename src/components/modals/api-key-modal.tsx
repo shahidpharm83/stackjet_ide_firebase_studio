@@ -135,14 +135,14 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
           description: `API Key "${key.name}" is working correctly.`,
         });
       } else {
-        throw new Error(result.error || 'Test call did not succeed.');
+        throw new Error(result.error || 'The provided API key is invalid or has insufficient permissions.');
       }
     } catch (error: any) {
       setKeyTestStates(prev => ({...prev, [key.id]: 'error' }));
        toast({
         variant: "destructive",
         title: "Test Failed",
-        description: `API Key "${key.name}" is not valid. ${error.message}`,
+        description: error.message,
       });
     } finally {
         setTimeout(() => {

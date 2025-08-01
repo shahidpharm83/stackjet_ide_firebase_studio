@@ -26,9 +26,8 @@ export const testApiKeyFlow = genkit.defineFlow(
       });
 
       // Make a simple, low-cost call to the model
-      const llm = testAi.model('googleai/gemini-2.0-flash');
       const response = await testAi.generate({
-        model: llm,
+        model: 'googleai/gemini-2.0-flash',
         prompt: 'Give me a one-word response.',
         config: {
           maxOutputTokens: 2,
