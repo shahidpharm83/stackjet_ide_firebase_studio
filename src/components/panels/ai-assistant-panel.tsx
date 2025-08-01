@@ -41,9 +41,10 @@ type Message = {
   isExecuting?: boolean;
   timings?: Timings;
   summaryComplete?: boolean;
+  isAwaitingExecution?: boolean;
 };
 
-type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error";
+type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error" | "awaiting_execution";
 
 type AiAssistantPanelProps = {
   project: Project | null;
@@ -151,7 +152,8 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
     setAgentState("executing");
     setMessages(prev => prev.map((msg, idx) => 
         idx === messageIndex ? { 
-            ...msg, 
+            ...msg,
+            isAwaitingExecution: false,
             isExecuting: true, 
             executedPlan: [],
             timings: { ...(msg.timings || { start: Date.now() }), executionStart: Date.now() }
@@ -183,23 +185,12 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
-                        // Note: This assumes new name is provided in `content`. A better schema would have a `newName` field.
+                        // The native `move` is on the handle itself in latest specs
                         const oldPath = fileName;
                         const newPath = step.content || '';
                         if (!newPath) throw new Error("New name not provided for rename operation.");
-                        const oldFileHandle = await getFileHandle(project.handle, oldPath, false);
-                        // The native `move` is on the handle itself in latest specs, but not widely supported.
-                        // We will simulate by copy and delete.
-                        const fileData = await oldFileHandle.getFile();
-                        const newFileHandle = await getFileHandle(project.handle, newPath, true);
-                        const writableNew = await newFileHandle.createWritable();
-                        await writableNew.write(await fileData.text());
-                        await writableNew.close();
-                        // now delete old
-                        const oldParts = oldPath.split('/');
-                        const oldName = oldParts.pop()!;
-                        const oldDirHandle = await getDirectoryHandle(project.handle, oldParts.join('/'), false);
-                        await oldDirHandle.removeEntry(oldName);
+                        const handleToMove = await getFileHandle(project.handle, oldPath, false);
+                        await handleToMove.move(newPath); // This may not be supported on all browsers, might need copy/delete fallback
                         stepResult = { status: 'success', outcome: `Renamed ${oldPath} to ${newPath}` };
                         break;
                     default:
@@ -322,24 +313,12 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
           executedPlan: [],
           isExecuting: false,
           summaryComplete: false,
+          isAwaitingExecution: true, // New flag
           timings: { start: startTime, thinkingEnd }
       };
       
-      setMessages((prevMessages) => {
-        const newMessages = [...prevMessages, assistantMessage];
-        const newAssistantMessageIndex = newMessages.length - 1;
-        
-        // Short delay to show the plan before execution starts
-        setTimeout(() => {
-          if (result.plan) {
-             startExecution(newAssistantMessageIndex, result.plan);
-          } else {
-             setAgentState("idle");
-          }
-        }, 1500); 
-        
-        return newMessages;
-      });
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      setAgentState("awaiting_execution");
 
 
     } catch (error: any) {
@@ -353,7 +332,7 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, startExecution, project]);
+  }, [agentState, agenticFlowWithRetry, project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -403,7 +382,7 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
     return `${(ms / 1000).toFixed(2)}s`;
   }
 
-  const AgentResponse = ({ message }: { message: Message }) => {
+  const AgentResponse = ({ message, index }: { message: Message; index: number; }) => {
     if (typeof message.content !== 'object') return null;
 
     const response = message.content;
@@ -463,6 +442,15 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
                 })}
               </div>
             </div>
+
+            {message.isAwaitingExecution && (
+                <div className="pt-2">
+                    <Button onClick={() => startExecution(index, plan)} className="w-full">
+                        <Play className="mr-2" />
+                        Execute Plan
+                    </Button>
+                </div>
+            )}
             
             {(isExecuting || isDone || executedPlan.length > 0) && (
                 <div>
@@ -568,12 +556,13 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
           </div>
         )
     }
-    return <AgentResponse message={message} />;
+    return <AgentResponse message={message} index={index} />;
   };
 
   const getAgentStatus = () => {
     switch (agentState) {
         case 'thinking': return `Thinking... (${thinkingTime}s)`;
+        case 'awaiting_execution': return 'Awaiting execution. Please review the plan.';
         case 'executing': return 'Executing plan...';
         case 'summarizing': return 'Finalizing summary...';
         case 'error': return 'An error occurred.';
