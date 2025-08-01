@@ -101,7 +101,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }
   }, [messages, agentState]);
   
-  const handleStartExecution = useCallback((messageIndex: number) => {
+  const startExecution = useCallback((messageIndex: number) => {
     const messageToUpdate = messages[messageIndex];
     if (typeof messageToUpdate.content !== 'object' || !messageToUpdate.content.plan) return;
 
@@ -198,7 +198,12 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           isExecuting: false,
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      setAgentState("idle");
+
+      setTimeout(() => {
+        const newMessageIndex = messages.length + 1; // +1 because state updates are async
+        startExecution(newMessageIndex);
+      }, 1500); // Delay before auto-execution starts
+
 
     } catch (error: any) {
       console.error("AI Agent error:", error);
@@ -210,7 +215,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry]);
+  }, [agentState, agenticFlowWithRetry, messages.length, startExecution]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -237,8 +242,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       if ('fileName' in step && (step.action === 'write' || step.action === 'edit')) {
         patchContent += `--- a/${step.fileName}\n`;
         patchContent += `+++ b/${step.fileName}\n`;
-        patchContent += `@@ -0,0 +1,${(step.content?.match(/\n/g) || []).length + 1} @@\n`;
-        patchContent += `${step.content?.split('\n').map(line => `+${line}`).join('\n')}\n`;
+        const contentLines = step.content?.split('\n') || [''];
+        patchContent += `@@ -0,0 +1,${contentLines.length} @@\n`;
+        patchContent += `${contentLines.map(line => `+${line}`).join('\n')}\n`;
       }
     });
 
@@ -253,7 +259,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     URL.revokeObjectURL(url);
   };
 
-  const AgentResponse = ({ message, index }: { message: Message, index: number }) => {
+  const AgentResponse = ({ message }: { message: Message }) => {
     if (typeof message.content !== 'object') return null;
 
     const response = message.content;
@@ -262,7 +268,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     const isExecuting = message.isExecuting;
     const totalSteps = plan.length;
     const executionProgress = totalSteps > 0 ? (executedPlan.length / totalSteps) * 100 : 0;
-    const isDone = !isExecuting && executedPlan.length === totalSteps;
+    const isDone = !isExecuting && executedPlan.length === totalSteps && executedPlan.length > 0;
 
     return (
       <Card className="bg-card/50 border-border/50">
@@ -289,26 +295,18 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                   const action = 'action' in step ? step.action : 'command';
                   return (
                     <div key={idx} className="p-3 rounded-md text-sm bg-muted/50 border-l-4 border-transparent">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 mb-1">
                         <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{idx + 1}</div>
                         {renderStepIcon(action)}
                         <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
                         <Badge variant="outline" className="text-xs capitalize">{action}</Badge>
                       </div>
+                      <p className="text-xs text-muted-foreground pl-7">{step.purpose}</p>
                     </div>
                   )
                 })}
               </div>
             </div>
-
-            {!isExecuting && !isDone && (
-                <div className="flex justify-end">
-                    <Button onClick={() => handleStartExecution(index)} disabled={agentState !== 'idle'}>
-                        <Play className="mr-2 h-4 w-4" />
-                        Execute Plan
-                    </Button>
-                </div>
-            )}
             
             {(isExecuting || isDone) && (
                 <div>
@@ -387,7 +385,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           </div>
         )
     }
-    return <AgentResponse message={message} index={index} />;
+    return <AgentResponse message={message} />;
   };
 
   const getAgentStatus = () => {
@@ -463,5 +461,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
+
+    
 
     
