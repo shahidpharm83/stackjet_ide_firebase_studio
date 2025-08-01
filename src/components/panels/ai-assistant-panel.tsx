@@ -1000,5 +1000,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    

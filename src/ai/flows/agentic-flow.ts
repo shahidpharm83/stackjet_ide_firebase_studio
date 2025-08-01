@@ -57,7 +57,7 @@ const agenticPrompt = ai.definePrompt({
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze Project Context:** Before formulating a plan, you MUST determine the technology stack (e.g., language, framework, libraries) of the project. Your first steps in the plan should often be to 'read' key configuration or manifest files like 'package.json', 'tsconfig.json', 'next.config.ts', etc. Your entire plan must be consistent with the identified technology stack. For example, do not suggest Python code for a TypeScript/React project.
+1.  **Analyze Project Context:** Before formulating a plan, you MUST determine the technology stack (e.g., language, framework, libraries) of the project. Your first steps in the plan should often be to 'read' key configuration or manifest files like 'package.json', 'tsconfig.json', or 'next.config.ts'/'next.config.js'. Your entire plan must be consistent with the identified technology stack. For example, do not suggest Python code for a TypeScript/React project.
 
 2.  **Special Handling for package.json:** When asked to add dependencies or scripts, you MUST first read the existing 'package.json' file. Then, your 'edit' operation for 'package.json' MUST contain the full, original content with the new dependencies or scripts correctly merged in. Do NOT generate a partial 'package.json' file, as this will corrupt the user's project.
 
@@ -130,7 +130,7 @@ export const agenticFlow = ai.defineFlow(
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze Project Context:** Before formulating a plan, you MUST determine the technology stack (e.g., language, framework, libraries) of the project. Your first steps in the plan should often be to 'read' key configuration or manifest files like 'package.json', 'tsconfig.json', 'next.config.ts', etc. Your entire plan must be consistent with the identified technology stack. For example, do not suggest Python code for a TypeScript/React project.
+1.  **Analyze Project Context:** Before formulating a plan, you MUST determine the technology stack (e.g., language, framework, libraries) of the project. Your first steps in the plan should often be to 'read' key configuration or manifest files like 'package.json', 'tsconfig.json', or 'next.config.ts'/'next.config.js'. Your entire plan must be consistent with the identified technology stack. For example, do not suggest Python code for a TypeScript/React project.
 
 2.  **Special Handling for package.json:** When asked to add dependencies or scripts, you MUST first read the existing 'package.json' file. Then, your 'edit' operation for 'package.json' MUST contain the full, original content with the new dependencies or scripts correctly merged in. Do NOT generate a partial 'package.json' file, as this will corrupt the user's project.
 
