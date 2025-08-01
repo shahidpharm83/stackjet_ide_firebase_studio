@@ -37,8 +37,12 @@ export default function Home() {
       } else {
         alert('Your browser does not support the File System Access API.');
       }
-    } catch (error) {
-      console.error('Error opening directory:', error);
+    } catch (error: any) {
+      if (error.name === 'SecurityError') {
+        alert('Opening a local folder is not allowed in this environment for security reasons. Please try running the app outside of an iframe.');
+      } else {
+        console.error('Error opening directory:', error);
+      }
     }
   }, []);
 
