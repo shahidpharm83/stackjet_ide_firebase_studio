@@ -49,6 +49,8 @@ type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error" | 
 type AiAssistantPanelProps = {
   project: Project | null;
   refreshFileTree: () => void;
+  onOpenFile: (path: string, handle: FileSystemFileHandle) => void;
+  onFileContentChange: (path: string, newContent: string) => void;
 };
 
 type ApiKey = {
@@ -68,7 +70,7 @@ const CommandOutput = ({ command, outcome, status }: { command: string; outcome:
 );
 
 
-export default function AiAssistantPanel({ project, refreshFileTree }: AiAssistantPanelProps) {
+export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile, onFileContentChange }: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
@@ -125,17 +127,17 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
   }, [messages, agentState]);
   
   // Helper to get a directory handle, creating it if it doesn't exist
-  const getDirectoryHandle = async (root: FileSystemDirectoryHandle, path: string, create = false) => {
+  const getDirectoryHandle = async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemDirectoryHandle> => {
     let currentHandle = root;
     const parts = path.split('/').filter(p => p);
     for (const part of parts) {
-      currentHandle = await currentHandle.getDirectoryHandle(part, { create });
+        currentHandle = await currentHandle.getDirectoryHandle(part, { create });
     }
     return currentHandle;
   };
   
   // Helper to get a file handle, creating directories if needed
-  const getFileHandle = async (root: FileSystemDirectoryHandle, path: string, create = false) => {
+  const getFileHandle = async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemFileHandle> => {
       const parts = path.split('/');
       const fileName = parts.pop();
       if (!fileName) throw new Error('Invalid file path');
@@ -167,14 +169,17 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
         try {
             if ('action' in step) { // It's a file operation
                 const { action, fileName, content } = step;
+                const fileHandle = await getFileHandle(project.handle, fileName, true);
+
                 switch (action) {
                     case 'write':
                     case 'edit':
-                        const fileHandle = await getFileHandle(project.handle, fileName, true);
                         const writable = await fileHandle.createWritable();
                         await writable.write(content || '');
                         await writable.close();
                         stepResult = { status: 'success', outcome: `Wrote ${content?.length || 0} bytes to ${fileName}` };
+                        onOpenFile(fileName, fileHandle);
+                        onFileContentChange(fileName, content || '');
                         break;
                     case 'delete':
                         const parts = fileName.split('/');
@@ -185,13 +190,10 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
-                        // The native `move` is on the handle itself in latest specs
-                        const oldPath = fileName;
                         const newPath = step.content || '';
                         if (!newPath) throw new Error("New name not provided for rename operation.");
-                        const handleToMove = await getFileHandle(project.handle, oldPath, false);
-                        await handleToMove.move(newPath); // This may not be supported on all browsers, might need copy/delete fallback
-                        stepResult = { status: 'success', outcome: `Renamed ${oldPath} to ${newPath}` };
+                        await fileHandle.move(newPath); 
+                        stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${newPath}` };
                         break;
                     default:
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
@@ -241,7 +243,7 @@ export default function AiAssistantPanel({ project, refreshFileTree }: AiAssista
     
     setAgentState("idle");
     refreshFileTree(); // Refresh the file explorer view
-  }, [project, refreshFileTree]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Header from "@/components/layout/header";
 import AiAssistantPanel from "@/components/panels/ai-assistant-panel";
 import FileExplorer, { getDirectoryTree, FileSystemTreeItem } from "@/components/panels/file-explorer";
@@ -26,12 +26,21 @@ export interface Project {
   tree: FileSystemTreeItem[];
 }
 
+export interface OpenFile {
+  name: string;
+  path: string;
+  handle: FileSystemFileHandle;
+  content: string;
+}
+
+
 export default function Home() {
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(false);
-
+  const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
+  const [activeFile, setActiveFile] = useState<string | null>(null);
 
   const refreshFileTree = useCallback(async () => {
     if (project) {
@@ -39,6 +48,49 @@ export default function Home() {
         setProject(p => p ? { ...p, tree } : null);
     }
   }, [project]);
+
+  const handleOpenFile = useCallback(async (path: string, handle: FileSystemFileHandle) => {
+    // Check if file is already open
+    if (openFiles.some(f => f.path === path)) {
+      setActiveFile(path);
+      return;
+    }
+
+    try {
+      const file = await handle.getFile();
+      const content = await file.text();
+      const newFile: OpenFile = {
+        name: handle.name,
+        path,
+        handle,
+        content,
+      };
+      setOpenFiles(prev => [...prev, newFile]);
+      setActiveFile(path);
+    } catch (error) {
+      console.error("Error opening file:", error);
+    }
+  }, [openFiles]);
+
+  const handleCloseFile = (path: string) => {
+    setOpenFiles(prev => prev.filter(f => f.path !== path));
+    if (activeFile === path) {
+      // If closing the active file, set active to another file or null
+      setActiveFile(prev => {
+          const remainingFiles = openFiles.filter(f => f.path !== path);
+          return remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1].path : null;
+      });
+    }
+  };
+  
+  const handleActiveFileChange = (path: string) => {
+    setActiveFile(path);
+  };
+  
+  const handleFileContentChange = useCallback((path: string, newContent: string) => {
+    setOpenFiles(prev => prev.map(f => f.path === path ? { ...f, content: newContent } : f));
+  }, []);
+
 
   const handleOpenFolder = useCallback(async () => {
     try {
@@ -50,6 +102,8 @@ export default function Home() {
           handle: directoryHandle,
           tree: tree
         });
+        setOpenFiles([]);
+        setActiveFile(null);
       } else {
         alert('Your browser does not support the File System Access API.');
       }
@@ -64,8 +118,8 @@ export default function Home() {
 
   const handleCloseProject = () => {
     setProject(null);
-    // Here you would also clean up other components' states as needed,
-    // for example, closing open files in the editor.
+    setOpenFiles([]);
+    setActiveFile(null);
   };
 
   return (
@@ -92,10 +146,16 @@ export default function Home() {
                     <FileExplorer 
                       project={project} 
                       onOpenFolder={handleOpenFolder} 
+                      onOpenFile={handleOpenFile}
                     />
                   </TabsContent>
                   <TabsContent value="ai" className="flex-1 overflow-hidden">
-                    <AiAssistantPanel project={project} refreshFileTree={refreshFileTree} />
+                    <AiAssistantPanel 
+                        project={project} 
+                        refreshFileTree={refreshFileTree} 
+                        onOpenFile={handleOpenFile}
+                        onFileContentChange={handleFileContentChange}
+                    />
                   </TabsContent>
                 </Tabs>
               </Panel>
@@ -105,7 +165,12 @@ export default function Home() {
           <Panel>
             <PanelGroup direction="vertical">
               <Panel className="flex-1">
-                <MainPanel projectOpen={!!project} />
+                <MainPanel 
+                  openFiles={openFiles} 
+                  activeFile={activeFile}
+                  onCloseFile={handleCloseFile}
+                  onActiveFileChange={handleActiveFileChange}
+                />
               </Panel>
               {isTerminalOpen && (
                 <>

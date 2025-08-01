@@ -1,3 +1,4 @@
+
 "use client"
 import React from 'react'
 import { Folder, FileText, ChevronRight, FolderOpen } from 'lucide-react';
@@ -11,25 +12,29 @@ export interface FileSystemTreeItem {
   name: string;
   kind: 'file' | 'directory';
   handle: FileSystemHandle;
+  path: string;
   children?: FileSystemTreeItem[];
 }
 
 // Function to recursively build the file tree from a directory handle
-export async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandle): Promise<FileSystemTreeItem[]> {
+export async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandle, path = ''): Promise<FileSystemTreeItem[]> {
     const tree: FileSystemTreeItem[] = [];
     for await (const handle of directoryHandle.values()) {
+        const newPath = path ? `${path}/${handle.name}` : handle.name;
         if (handle.kind === 'directory') {
             tree.push({
                 name: handle.name,
                 kind: handle.kind,
                 handle,
-                children: await getDirectoryTree(handle),
+                path: newPath,
+                children: await getDirectoryTree(handle, newPath),
             });
         } else {
             tree.push({
                 name: handle.name,
                 kind: handle.kind,
                 handle,
+                path: newPath,
             });
         }
     }
@@ -41,11 +46,22 @@ export async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandl
     });
 }
 
+type FileTreeItemProps = {
+    item: FileSystemTreeItem;
+    level?: number;
+    onOpenFile: (path: string, handle: FileSystemFileHandle) => void;
+}
 
-const FileTreeItem = ({ item, level = 0 }: { item: FileSystemTreeItem; level?: number }) => {
+const FileTreeItem = ({ item, level = 0, onOpenFile }: FileTreeItemProps) => {
     const isFolder = item.kind === 'directory';
     const Icon = isFolder ? Folder : FileText;
     const paddingLeft = `${level * 16 + 12}px`;
+
+    const handleFileClick = () => {
+        if (item.kind === 'file') {
+            onOpenFile(item.path, item.handle as FileSystemFileHandle);
+        }
+    }
 
     if (isFolder) {
         return (
@@ -59,7 +75,7 @@ const FileTreeItem = ({ item, level = 0 }: { item: FileSystemTreeItem; level?: n
             </CollapsibleTrigger>
             <CollapsibleContent>
               {item.children?.map((child) => (
-                  <FileTreeItem key={child.name} item={child} level={level + 1} />
+                  <FileTreeItem key={child.path} item={child} level={level + 1} onOpenFile={onOpenFile}/>
               ))}
             </CollapsibleContent>
           </Collapsible>
@@ -67,7 +83,11 @@ const FileTreeItem = ({ item, level = 0 }: { item: FileSystemTreeItem; level?: n
     }
     
     return (
-        <div className={`flex items-center py-1.5 px-3 rounded-md cursor-pointer hover:bg-muted`} style={{ paddingLeft }}>
+        <div 
+            className={`flex items-center py-1.5 px-3 rounded-md cursor-pointer hover:bg-muted`} 
+            style={{ paddingLeft }}
+            onClick={handleFileClick}
+        >
              <span className="w-4 h-4 mr-1 flex-shrink-0" />
              <Icon className="w-4 h-4 mr-2 text-foreground/70 flex-shrink-0" />
              <span className="truncate">{item.name}</span>
@@ -78,9 +98,10 @@ const FileTreeItem = ({ item, level = 0 }: { item: FileSystemTreeItem; level?: n
 type FileExplorerProps = {
   project: Project | null;
   onOpenFolder: () => void;
+  onOpenFile: (path: string, handle: FileSystemFileHandle) => void;
 };
 
-export default function FileExplorer({ project, onOpenFolder }: FileExplorerProps) {
+export default function FileExplorer({ project, onOpenFolder, onOpenFile }: FileExplorerProps) {
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
       <div className="p-2 flex justify-between items-center border-b border-border">
@@ -88,7 +109,7 @@ export default function FileExplorer({ project, onOpenFolder }: FileExplorerProp
       </div>
        <ScrollArea className="flex-1 p-2">
         {project?.tree && project.tree.length > 0 ? (
-            project.tree.map(item => <FileTreeItem key={item.name} item={item} />)
+            project.tree.map(item => <FileTreeItem key={item.path} item={item} onOpenFile={onOpenFile} />)
         ) : (
             <div className="p-4 text-center text-muted-foreground text-sm">
                 <p>No folder opened.</p>
