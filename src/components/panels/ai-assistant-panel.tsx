@@ -162,8 +162,10 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             const lastMessage = prev[prev.length - 1];
             if (lastMessage.role === 'user' && !lastMessage.timestamp) {
                 const newMessages = [...prev];
-                const last = newMessages[newMessages.length - 1];
-                last.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                newMessages[newMessages.length - 1] = {
+                  ...lastMessage,
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
                 return newMessages;
             }
             return prev; // Return previous state if no changes are needed
@@ -268,7 +270,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                            const fileToRead = await fileHandle.getFile();
                            existingContent = await fileToRead.text();
                          } catch (e) {
-                           // File didn't exist, which is fine. existingContent is empty.
+                           // File didn't exist, which is fine for an edit. existingContent is empty.
                          }
                          onOpenFile(fileName, fileHandle, existingContent); // Ensure file is open before typing
                          await typeContent(fileName, content, existingContent);
@@ -991,4 +993,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
 }
 
     
+    
+
     
