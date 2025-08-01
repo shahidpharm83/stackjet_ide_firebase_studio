@@ -119,9 +119,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }
   }, [messages, agentState]);
   
-  const startExecution = useCallback((messageIndex: number) => {
-    const messageToUpdate = messages[messageIndex];
-    if (!messageToUpdate || typeof messageToUpdate.content !== 'object' || !messageToUpdate.content.plan) return;
+  const startExecution = useCallback((messageIndex: number, plan: PlanStep[]) => {
+    if (!plan || plan.length === 0) return;
 
     setAgentState("executing");
     setMessages(prev => prev.map((msg, idx) => 
@@ -133,8 +132,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         } : msg
     ));
 
-    const totalSteps = messageToUpdate.content.plan.length;
-
+    const totalSteps = plan.length;
     let stepIndex = 0;
     const interval = setInterval(() => {
         if (stepIndex >= totalSteps) {
@@ -160,7 +158,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             return;
         }
         
-        const nextStep = messageToUpdate.content.plan[stepIndex];
+        const nextStep = plan[stepIndex];
         const stepStartTime = Date.now();
         
         // Simulate step execution time
@@ -181,7 +179,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         
         stepIndex++;
     }, 800);
-  }, [messages]);
+  }, []);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
@@ -256,9 +254,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         
         // Short delay to show the plan before execution starts
         setTimeout(() => {
-            if (newMessages[newAssistantMessageIndex]) {
-               startExecution(newAssistantMessageIndex);
-            }
+          if (result.plan) {
+             startExecution(newAssistantMessageIndex, result.plan);
+          }
         }, 1500); 
         
         return newMessages;
