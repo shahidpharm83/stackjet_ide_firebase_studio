@@ -45,7 +45,7 @@ function SyntaxHighlighter({ code }: { code: string }) {
         /\b(React|HelloWorld|console)\b/g,
         '<span class="text-accent">$&</span>'
       )
-      .replace(/(&quot;.*?&quot;)/g, '<span class="text-amber-400">$&</span>')
+      .replace(/(&quot;.*?&quot;)|(&#039;.*?&#039;)/g, '<span class="text-amber-400">$&</span>')
       .replace(/(\/\/.*)/g, '<span class="text-green-500">$&</span>')
       .replace(
         /(&lt;h1.*?&gt;|&lt;\/h1&gt;)/g,
@@ -73,7 +73,7 @@ function SyntaxHighlighter({ code }: { code: string }) {
 export default function EditorPanel() {
   return (
     <div className="h-full flex flex-col">
-       <div className="flex-shrink-0 p-2 border-b border-border flex items-center justify-between">
+       <div className="flex-shrink-0 p-2 border-b border-border flex items-center justify-between h-12">
         <span className="font-medium text-foreground">index.js</span>
         <div className="flex items-center gap-2">
             <Badge variant="secondary">JavaScript</Badge>

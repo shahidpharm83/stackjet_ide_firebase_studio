@@ -1,15 +1,22 @@
+"use client";
+
+import { useState } from "react";
 import Header from "@/components/layout/header";
 import AiAssistantPanel from "@/components/panels/ai-assistant-panel";
 import FileExplorer from "@/components/panels/file-explorer";
 import MainPanel from "@/components/panels/main-panel";
 import PreviewPanel from "@/components/panels/preview-panel";
+import StatusBar from "@/components/layout/status-bar";
 import { SidebarProvider, Sidebar } from "@/components/ui/sidebar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { File, Bot } from "lucide-react";
+import TerminalPanel from "@/components/panels/terminal-panel";
 
 export default function Home() {
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
       <Header />
@@ -37,8 +44,9 @@ export default function Home() {
                 </TabsContent>
               </Tabs>
             </Sidebar>
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden">
               <MainPanel />
+              {isTerminalOpen && <TerminalPanel />}
             </div>
             <Sidebar side="right" className="flex-1 border-l border-border" collapsible="offcanvas" defaultOpen={false}>
               <PreviewPanel />
@@ -47,6 +55,7 @@ export default function Home() {
           </div>
         </SidebarProvider>
       </div>
+      <StatusBar onTerminalToggle={() => setIsTerminalOpen(!isTerminalOpen)} />
     </div>
   );
 }
