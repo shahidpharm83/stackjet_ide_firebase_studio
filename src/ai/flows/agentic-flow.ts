@@ -36,9 +36,9 @@ const AgenticFlowInputSchema = z.object({
 export type AgenticFlowInput = z.infer<typeof AgenticFlowInputSchema>;
 
 const AgenticFlowOutputSchema = z.object({
-  analysis: z.string().describe("A brief analysis of the user's request."),
+  analysis: z.string().describe("A detailed analysis of the user's request, including your thought process."),
   plan: z.array(PlanStepSchema).describe('The step-by-step plan to address the user\'s request.'),
-  summary: z.string().describe('A concluding summary of the planned actions.'),
+  summary: z.string().describe('A concluding summary of the planned actions, including total files changed and operations performed.'),
   suggestions: z.array(z.string()).describe('A list of suggestions for next steps or improvements.'),
 });
 export type AgenticFlowOutput = z.infer<typeof AgenticFlowOutputSchema>;
@@ -55,9 +55,9 @@ const agenticPrompt = ai.definePrompt({
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze:** Briefly analyze the user's request to understand their goal.
+1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process.
 2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'.
-3.  **Summarize:** Provide a short summary of the entire plan.
+3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed and operations to be performed.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**

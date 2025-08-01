@@ -17,6 +17,7 @@ import type { Project } from '@/app/page';
 type Message = {
   role: "user" | "assistant";
   content: string | AgenticFlowOutput;
+  timestamp?: string;
 };
 
 type AgentState = "idle" | "thinking" | "analyzing" | "planning" | "executing" | "summarizing" | "error";
@@ -87,7 +88,11 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const userMessage: Message = { role: "user", content: input };
+    const userMessage: Message = { 
+      role: "user", 
+      content: input,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setAgentState("thinking");
@@ -238,7 +243,14 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
 
   const renderMessageContent = (message: Message) => {
     if (typeof message.content === 'string') {
-        return <p className="text-sm whitespace-pre-wrap">{message.content}</p>;
+        return (
+          <div className="flex flex-col items-end">
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-full">
+                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              </div>
+              {message.timestamp && <span className="text-xs text-muted-foreground mt-1">{message.timestamp}</span>}
+          </div>
+        )
     }
     return <AgentResponse response={message.content} />;
   };
@@ -268,18 +280,10 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           )}
           {messages.map((message, index) => (
             <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
-              {message.role === "user" && (
-                  <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-[90%]">
-                    {renderMessageContent(message)}
-                  </div>
-              )}
-              {message.role === "user" && <User className="w-6 h-6 text-accent flex-shrink-0" />}
-              
-              {message.role === "assistant" && (
-                <div className="w-full">
-                    {renderMessageContent(message)}
-                </div>
-              )}
+              {message.role === "user" && <User className="w-6 h-6 text-accent flex-shrink-0 order-2" />}
+              <div className={`w-full ${message.role === 'user' ? 'max-w-[90%]' : ''}`}>
+                {renderMessageContent(message)}
+              </div>
             </div>
           ))}
           {agentState !== 'idle' && agentState !== 'executing' && agentState !== 'summarizing' && agentState !== 'planning' && (
