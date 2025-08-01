@@ -35,6 +35,7 @@ const PlanStepSchema = z.union([
 const AgenticFlowInputSchema = z.object({
   prompt: z.string().describe('The user\'s request.'),
   apiKey: z.string().optional().describe('The Gemini API key to use for this request.'),
+  imageDataUri: z.string().optional().describe("An optional image provided by the user, as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
 });
 export type AgenticFlowInput = z.infer<typeof AgenticFlowInputSchema>;
 
@@ -49,19 +50,25 @@ export type AgenticFlowOutput = z.infer<typeof AgenticFlowOutputSchema>;
 
 const agenticPrompt = ai.definePrompt({
   name: 'agenticPrompt',
-  input: {schema: AgenticFlowInputSchema.pick({ prompt: true })}, // Prompt only needs the prompt field
+  input: {schema: AgenticFlowInputSchema.pick({ prompt: true, imageDataUri: true })},
   output: {schema: AgenticFlowOutputSchema},
   prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process.
-2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. For example, if you read a package.json file, use that information to determine the project type and dependencies.
+1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan.
+2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read.
 3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**
 "{{{prompt}}}"
+
+{{#if imageDataUri}}
+**Reference Image:**
+An image has been provided. Analyze it carefully to inform your plan. For example, if it's a UI mockup, your plan should generate the necessary code to implement it.
+{{media url=imageDataUri}}
+{{/if}}
 
 Based on the request, generate a JSON object that strictly follows the output schema.
 Ensure all file paths are relative. For any new code, provide the complete file content.
@@ -90,31 +97,37 @@ export const agenticFlow = ai.defineFlow(
       const tempPrompt = executionAi.definePrompt({
         name: 'agenticPrompt_temp', // Different name to avoid conflicts
         model: 'googleai/gemini-2.0-flash', // Explicitly define the model
-        input: { schema: AgenticFlowInputSchema.pick({ prompt: true }) },
+        input: { schema: AgenticFlowInputSchema.pick({ prompt: true, imageDataUri: true }) },
         output: { schema: AgenticFlowOutputSchema },
         prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process.
-2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. For example, if you read a package.json file, use that information to determine the project type and dependencies.
+1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan.
+2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read.
 3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**
 "{{{prompt}}}"
 
+{{#if imageDataUri}}
+**Reference Image:**
+An image has been provided. Analyze it carefully to inform your plan. For example, if it's a UI mockup, your plan should generate the necessary code to implement it.
+{{media url=imageDataUri}}
+{{/if}}
+
 Based on the request, generate a JSON object that strictly follows the output schema.
 Ensure all file paths are relative. For any new code, provide the complete file content.
 `,
       });
       
-      const { output } = await tempPrompt({ prompt: input.prompt });
+      const { output } = await tempPrompt({ prompt: input.prompt, imageDataUri: input.imageDataUri });
       return output!;
 
     } else {
       // Use the globally defined prompt if no specific key is provided.
-      const {output} = await agenticPrompt({ prompt: input.prompt });
+      const {output} = await agenticPrompt({ prompt: input.prompt, imageDataUri: input.imageDataUri });
       return output!;
     }
   }

@@ -5,15 +5,19 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCircle, ChevronRight, ChevronsRight, Pencil, Lightbulb, ClipboardCheck, Play, Download } from "lucide-react";
+import { Bot, Mic, Send, User, CircleDashed, File, Terminal, CheckCircle2, XCircle, ChevronRight, ChevronsRight, Pencil, Lightbulb, ClipboardCheck, Play, Download, Paperclip, Image as ImageIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { agenticFlow, AgenticFlowOutput, AgenticFlowInput } from "@/ai/flows/agentic-flow";
+import { agenticFlow, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import OperationSummaryChart from "@/components/charts/operation-summary-chart";
 import type { Project, OpenFile } from '@/app/page';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { FileSystemTreeItem } from "@/components/panels/file-explorer";
+import { useToast } from "@/hooks/use-toast";
+
 
 type PlanStep = AgenticFlowOutput['plan'][0];
 
@@ -32,6 +36,12 @@ type Timings = {
     summaryEnd?: number;
 };
 
+type UploadedFile = {
+    name: string;
+    type: string;
+    dataUri: string;
+}
+
 type Message = {
   role: "user" | "assistant";
   content: string | AgenticFlowOutput;
@@ -42,6 +52,7 @@ type Message = {
   timings?: Timings;
   summaryComplete?: boolean;
   isAwaitingExecution?: boolean;
+  uploadedFile?: UploadedFile;
 };
 
 type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error" | "awaiting_execution";
@@ -76,11 +87,31 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   const [input, setInput] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
   const [thinkingTime, setThinkingTime] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [fileSearch, setFileSearch] = useState({ query: "", active: false, results: [] as string[] });
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
 
+  const { toast } = useToast();
+  const recognitionRef = useRef<any>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const thinkingTimerRef = useRef<NodeJS.Timeout>();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   
   const getStorageKey = useCallback((projectName: string) => `chatHistory_${projectName}`, []);
+
+  const flattenFileTree = (tree: FileSystemTreeItem[]): string[] => {
+    let files: string[] = [];
+    for (const item of tree) {
+        if (item.kind === 'file') {
+            files.push(item.path);
+        } else if (item.children) {
+            files = files.concat(flattenFileTree(item.children));
+        }
+    }
+    return files;
+  };
+  
 
   useEffect(() => {
     if (project) {
@@ -222,16 +253,11 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 const rootHandle = project.handle;
                 
                 let fileHandle: FileSystemFileHandle;
-                let dirHandle: FileSystemDirectoryHandle;
-                const parts = fileName.split('/');
-                const name = parts.pop()!;
-                const dirPath = parts.join('/');
-
-
+                
                 switch (action) {
                     case 'write':
-                        dirHandle = await getDirectoryHandle(rootHandle, dirPath, true);
-                        fileHandle = await dirHandle.getFileHandle(name, { create: true });
+                        const dirHandleWrite = await getDirectoryHandle(rootHandle, fileName.substring(0, fileName.lastIndexOf('/')), true);
+                        fileHandle = await dirHandleWrite.getFileHandle(fileName.substring(fileName.lastIndexOf('/') + 1), { create: true });
                         await typeContent(fileName, content, '');
                         onOpenFile(fileName, fileHandle, content);
                         const writableWrite = await fileHandle.createWritable();
@@ -240,8 +266,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         stepResult = { status: 'success', outcome: `Wrote ${content.length} bytes to ${fileName}` };
                         break;
                     case 'edit':
-                         dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
-                         fileHandle = await dirHandle.getFileHandle(name, { create: false });
+                         const dirHandleEdit = await getDirectoryHandle(rootHandle, fileName.substring(0, fileName.lastIndexOf('/')), false);
+                         fileHandle = await dirHandleEdit.getFileHandle(fileName.substring(fileName.lastIndexOf('/') + 1), { create: false });
                          const existingFileEdit = await fileHandle.getFile();
                          const existingContent = await existingFileEdit.text();
                          await typeContent(fileName, content, existingContent);
@@ -252,8 +278,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                          stepResult = { status: 'success', outcome: `Edited ${fileName}` };
                          break;
                     case 'delete':
-                        dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
-                        await dirHandle.removeEntry(name, { recursive: false });
+                        const dirHandleDelete = await getDirectoryHandle(rootHandle, fileName.substring(0, fileName.lastIndexOf('/')), false);
+                        await dirHandleDelete.removeEntry(fileName.substring(fileName.lastIndexOf('/') + 1), { recursive: false });
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
@@ -360,7 +386,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     await refreshFileTree();
   }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile, handleOpenFileWithContent]);
 
-  const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
+  const agenticFlowWithRetry = useCallback(async (promptText: string, imageDataUri?: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
     try {
       const savedKeys = localStorage.getItem("geminiApiKeys");
@@ -382,7 +408,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       try {
         console.log(`Attempting request with key: ${currentKey.name}`);
         // Pass the specific key to the backend flow.
-        const result = await agenticFlow({ prompt: promptText, apiKey: currentKey.key });
+        const result = await agenticFlow({ prompt: promptText, apiKey: currentKey.key, imageDataUri });
         return result; // Success
       } catch (error) {
         console.error(`API call failed for key ${currentKey.name}:`, error);
@@ -394,7 +420,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   }, []);
 
   const sendPrompt = useCallback(async (promptText: string) => {
-    if (!promptText.trim() || agentState !== 'idle') return;
+    if (!promptText.trim() && !uploadedFile || agentState !== 'idle') return;
     
     if (!project) {
         setInput("Please open a folder first to provide a context for your project.");
@@ -405,10 +431,12 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
 
     const userMessage: Message = { 
       role: "user", 
-      content: promptText
+      content: promptText,
+      uploadedFile: uploadedFile || undefined,
     };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setUploadedFile(null);
 
     setAgentState("thinking");
     setThinkingTime(0);
@@ -417,7 +445,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     }, 1000);
 
     try {
-      const result = await agenticFlowWithRetry(promptText);
+      const result = await agenticFlowWithRetry(promptText, uploadedFile?.dataUri);
       
       clearInterval(thinkingTimerRef.current);
       const thinkingEnd = Date.now();
@@ -448,13 +476,161 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, project]);
+  }, [agentState, agenticFlowWithRetry, project, uploadedFile]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendPrompt(input);
   };
   
+    const handleMicClick = () => {
+        if (isRecording) {
+            recognitionRef.current?.stop();
+            setIsRecording(false);
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            toast({
+                variant: "destructive",
+                title: "Speech Recognition Not Supported",
+                description: "Your browser does not support the Web Speech API.",
+            });
+            return;
+        }
+
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = 'en-US';
+
+        recognitionRef.current.onstart = () => {
+            setIsRecording(true);
+        };
+
+        recognitionRef.current.onend = () => {
+            setIsRecording(false);
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+            console.error('Speech recognition error', event.error);
+            setIsRecording(false);
+             toast({
+                variant: "destructive",
+                title: "Speech Recognition Error",
+                description: event.error,
+            });
+        };
+
+        recognitionRef.current.onresult = (event: any) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            setInput(input + finalTranscript + interimTranscript);
+        };
+
+        recognitionRef.current.start();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setInput(text);
+
+    const match = /@(\S*)$/.exec(text);
+    if (match && project?.tree) {
+        const query = match[1];
+        const allFiles = flattenFileTree(project.tree);
+        const results = allFiles.filter(file => file.toLowerCase().includes(query.toLowerCase())).slice(0, 10);
+        setFileSearch({ active: true, query, results });
+    } else {
+        setFileSearch({ active: false, query: "", results: [] });
+    }
+  };
+
+  const handleFileSelect = (filePath: string) => {
+    setInput(prev => {
+        const atIndex = prev.lastIndexOf('@');
+        return prev.substring(0, atIndex) + `@${filePath} `;
+    });
+    setFileSearch({ active: false, query: "", results: [] });
+    textareaRef.current?.focus();
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendPrompt(input);
+    }
+    
+    if (fileSearch.active && fileSearch.results.length > 0 && e.key === 'Tab') {
+        e.preventDefault();
+        handleFileSelect(fileSearch.results[0]);
+    }
+  };
+  
+    const handleFileUpload = (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            toast({
+                variant: "destructive",
+                title: "Unsupported File Type",
+                description: "Currently, only image files can be uploaded.",
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setUploadedFile({
+                name: file.name,
+                type: file.type,
+                dataUri: reader.result as string
+            });
+        };
+        reader.onerror = () => {
+             toast({
+                variant: "destructive",
+                title: "File Read Error",
+                description: "Could not read the selected file.",
+            });
+        }
+        reader.readAsDataURL(file);
+  }
+
+  const handlePaste = (event: React.ClipboardEvent) => {
+    const items = event.clipboardData.items;
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          handleFileUpload(file);
+          break;
+        }
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          handleFileUpload(e.dataTransfer.files[0]);
+          e.dataTransfer.clearData();
+      }
+  };
+
+
   const renderStepIcon = (action: string) => {
     switch (action) {
       case 'write': return <Pencil className="w-4 h-4 text-blue-400" />;
@@ -666,6 +842,13 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         return (
           <div className="flex flex-col items-end">
               <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-full">
+                 {message.uploadedFile && message.uploadedFile.type.startsWith('image/') && (
+                     <img 
+                        src={message.uploadedFile.dataUri} 
+                        alt="uploaded content" 
+                        className="rounded-md mb-2 max-w-xs max-h-48"
+                     />
+                  )}
                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
               {message.timestamp && <span className="text-xs text-muted-foreground mt-1">{message.timestamp}</span>}
@@ -687,7 +870,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background" onDragOver={handleDragOver} onDrop={handleDrop}>
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-6">
           {messages.length === 0 && (
@@ -719,31 +902,71 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         </div>
       </ScrollArea>
       <div className="p-4 border-t border-border shrink-0">
-        <form onSubmit={handleSubmit}>
-          <div className="relative">
-            <Textarea
-              placeholder="Prompt Stacky to build, test, or refactor..."
-              className="pr-20 min-h-[60px] resize-none"
-              disabled={agentState !== 'idle'}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendPrompt(input);
-                }
-              }}
-            />
-            <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
-              <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
-                <Mic className="w-5 h-5" />
-              </Button>
-              <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()}>
-                <Send className="w-5 h-5" />
-              </Button>
+        <Popover open={fileSearch.active} onOpenChange={(isOpen) => setFileSearch(fs => ({ ...fs, active: isOpen }))}>
+          <PopoverTrigger asChild>
+            <form onSubmit={handleSubmit} className="relative">
+             {uploadedFile && (
+                <div className="absolute bottom-full left-0 mb-2 p-2 bg-muted rounded-md w-full">
+                    <div className="flex items-center gap-2">
+                        {uploadedFile.type.startsWith('image/') ? <ImageIcon className="w-5 h-5" /> : <File className="w-5 h-5" />}
+                        <span className="text-sm truncate flex-1">{uploadedFile.name}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setUploadedFile(null)}>
+                            <XCircle className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+              )}
+              <Textarea
+                ref={textareaRef}
+                placeholder="Prompt Stacky, or drag & drop an image..."
+                className="pr-24 min-h-[60px] resize-none"
+                disabled={agentState !== 'idle'}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleInputKeyDown}
+                onPaste={handlePaste}
+              />
+              <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
+                 <input 
+                    type="file" 
+                    id="file-upload" 
+                    className="hidden" 
+                    onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+                    accept="image/*"
+                 />
+                 <Button asChild variant="ghost" size="icon" disabled={agentState !== 'idle'}>
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                        <Paperclip className="w-5 h-5" />
+                    </label>
+                 </Button>
+                 <Button variant="ghost" size="icon" onClick={handleMicClick} disabled={agentState !== 'idle'}>
+                    <Mic className={`w-5 h-5 ${isRecording ? 'text-red-500' : ''}`} />
+                 </Button>
+                 <Button type="submit" size="icon" disabled={agentState !== 'idle' || (!input.trim() && !uploadedFile)}>
+                    <Send className="w-5 h-5" />
+                 </Button>
+              </div>
+            </form>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] p-0" align="start">
+            <div className="p-2 font-semibold text-sm border-b">Mention a file</div>
+            <div className="max-h-60 overflow-y-auto">
+              {fileSearch.results.length > 0 ? (
+                fileSearch.results.map(file => (
+                  <div 
+                    key={file} 
+                    className="p-2 hover:bg-accent cursor-pointer text-sm"
+                    onClick={() => handleFileSelect(file)}
+                  >
+                    {file}
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-muted-foreground">No files found.</div>
+              )}
             </div>
-          </div>
-        </form>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
