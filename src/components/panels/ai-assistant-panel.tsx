@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { agenticFlow, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { Project } from '@/app/page';
 
 
 type Message = {
@@ -20,8 +21,12 @@ type Message = {
 
 type AgentState = "idle" | "thinking" | "analyzing" | "planning" | "executing" | "summarizing" | "error";
 
+type AiAssistantPanelProps = {
+  project: Project | null;
+};
 
-export default function AiAssistantPanel() {
+
+export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
@@ -29,7 +34,44 @@ export default function AiAssistantPanel() {
   const [executedSteps, setExecutedSteps] = useState(0);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const projectOpen = true; 
+  
+  const getStorageKey = (projectName: string) => `chatHistory_${projectName}`;
+
+  useEffect(() => {
+    if (project) {
+      try {
+        const savedMessages = localStorage.getItem(getStorageKey(project.name));
+        if (savedMessages) {
+          setMessages(JSON.parse(savedMessages));
+        } else {
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error("Failed to load messages from localStorage", error);
+        setMessages([]);
+      }
+    } else {
+      setMessages([]);
+    }
+  }, [project]);
+
+  useEffect(() => {
+    if (project && messages.length > 0) {
+       try {
+        localStorage.setItem(getStorageKey(project.name), JSON.stringify(messages));
+      } catch (error) {
+        console.error("Failed to save messages to localStorage", error);
+      }
+    }
+     if (project && messages.length === 0) {
+      try {
+        localStorage.removeItem(getStorageKey(project.name));
+      } catch (error) {
+        console.error("Failed to remove messages from localStorage", error);
+      }
+    }
+  }, [messages, project]);
+
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -220,7 +262,7 @@ export default function AiAssistantPanel() {
               <Bot className="w-12 h-12 mb-4 text-primary" />
               <h2 className="text-lg font-semibold">Agentic AI Assistant</h2>
               <p className="text-sm">
-                I can analyze your requests, create a plan, and execute it for you.
+                {project ? 'I can analyze your requests, create a plan, and execute it for you.' : 'Open a project to start a conversation.'}
               </p>
             </div>
           )}
@@ -254,9 +296,9 @@ export default function AiAssistantPanel() {
       <div className="p-4 border-t border-border shrink-0">
         <form onSubmit={handleSubmit} className="relative">
           <Textarea
-            placeholder={projectOpen ? "Prompt Stacky to build, test, or refactor..." : "Open a project to use the AI Assistant."}
+            placeholder={!!project ? "Prompt Stacky to build, test, or refactor..." : "Open a project to use the AI Assistant."}
             className="pr-20 min-h-[60px] resize-none"
-            disabled={!projectOpen || agentState !== 'idle'}
+            disabled={!project || agentState !== 'idle'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -267,10 +309,10 @@ export default function AiAssistantPanel() {
             }}
           />
           <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
-            <Button variant="ghost" size="icon" disabled={!projectOpen || agentState !== 'idle'}>
+            <Button variant="ghost" size="icon" disabled={!project || agentState !== 'idle'}>
               <Mic className="w-5 h-5" />
             </Button>
-            <Button type="submit" size="icon" disabled={!projectOpen || agentState !== 'idle' || !input.trim()}>
+            <Button type="submit" size="icon" disabled={!project || agentState !== 'idle' || !input.trim()}>
               <Send className="w-5 h-5" />
             </Button>
           </div>

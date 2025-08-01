@@ -87,7 +87,7 @@ export default function Home() {
                     />
                   </TabsContent>
                   <TabsContent value="ai" className="flex-1 overflow-hidden">
-                    <AiAssistantPanel />
+                    <AiAssistantPanel project={project} />
                   </TabsContent>
                 </Tabs>
               </Panel>
