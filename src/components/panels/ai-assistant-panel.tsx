@@ -19,6 +19,9 @@ type Message = {
   role: "user" | "assistant";
   content: string | AgenticFlowOutput;
   timestamp?: string;
+  plan?: AgenticFlowOutput['plan'];
+  executedPlan?: AgenticFlowOutput['plan'];
+  isExecuting?: boolean;
 };
 
 type AgentState = "idle" | "thinking" | "analyzing" | "planning" | "executing" | "summarizing" | "error";
@@ -48,9 +51,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
-  const [executionProgress, setExecutionProgress] = useState(0);
-  const [executedSteps, setExecutedSteps] = useState(0);
-
+  
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
   const getStorageKey = useCallback((projectName: string) => `chatHistory_${projectName}`, []);
@@ -98,27 +99,45 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [messages, agentState, executionProgress]);
+  }, [messages, agentState]);
   
-  const handleStartExecution = useCallback((plan: AgenticFlowOutput['plan']) => {
+  const handleStartExecution = useCallback((messageIndex: number) => {
+    const messageToUpdate = messages[messageIndex];
+    if (typeof messageToUpdate.content !== 'object' || !messageToUpdate.content.plan) return;
+
+    setMessages(prev => prev.map((msg, idx) => 
+        idx === messageIndex ? { ...msg, isExecuting: true, executedPlan: [] } : msg
+    ));
     setAgentState("executing");
-    setExecutionProgress(0);
-    setExecutedSteps(0);
-    
-    const totalSteps = plan.length;
+
+    const totalSteps = messageToUpdate.content.plan.length;
+
+    let stepIndex = 0;
     const interval = setInterval(() => {
-        setExecutedSteps(prev => {
-            const nextStep = prev + 1;
-            setExecutionProgress((nextStep / totalSteps) * 100);
-            if (nextStep >= totalSteps) {
-                clearInterval(interval);
-                setAgentState("summarizing");
-                setTimeout(() => setAgentState("idle"), 3000); 
+        if (stepIndex >= totalSteps) {
+            clearInterval(interval);
+            setAgentState("summarizing");
+            setTimeout(() => {
+                setAgentState("idle");
+                 setMessages(prev => prev.map((msg, idx) => 
+                    idx === messageIndex ? { ...msg, isExecuting: false } : msg
+                ));
+            }, 3000);
+            return;
+        }
+        
+        const nextStep = messageToUpdate.content.plan[stepIndex];
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx === messageIndex) {
+                const newExecutedPlan = [...(msg.executedPlan || []), nextStep];
+                return { ...msg, executedPlan: newExecutedPlan };
             }
-            return nextStep;
-        });
+            return msg;
+        }));
+        
+        stepIndex++;
     }, 800);
-  }, []);
+  }, [messages]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
@@ -171,15 +190,15 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       
       const result = await agenticFlowWithRetry(promptText);
 
-      const assistantMessage: Message = { role: "assistant", content: result };
+      const assistantMessage: Message = { 
+          role: "assistant", 
+          content: result,
+          plan: result.plan,
+          executedPlan: [],
+          isExecuting: false,
+      };
       setMessages((prev) => [...prev, assistantMessage]);
-      setAgentState("planning");
-      
-      // Automatically start execution after a short delay to show the plan
-      setTimeout(() => {
-        handleStartExecution(result.plan);
-      }, 1000);
-
+      setAgentState("idle");
 
     } catch (error: any) {
       console.error("AI Agent error:", error);
@@ -191,7 +210,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, handleStartExecution, agenticFlowWithRetry]);
+  }, [agentState, agenticFlowWithRetry]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,10 +253,16 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     URL.revokeObjectURL(url);
   };
 
-  const AgentResponse = ({ response }: { response: AgenticFlowOutput }) => {
-    const totalSteps = response.plan.length;
-    const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing' || agentState === 'idle';
-    const successfulSteps = (agentState === 'summarizing' || agentState === 'idle') ? totalSteps : executedSteps;
+  const AgentResponse = ({ message, index }: { message: Message, index: number }) => {
+    if (typeof message.content !== 'object') return null;
+
+    const response = message.content;
+    const plan = message.plan || [];
+    const executedPlan = message.executedPlan || [];
+    const isExecuting = message.isExecuting;
+    const totalSteps = plan.length;
+    const executionProgress = totalSteps > 0 ? (executedPlan.length / totalSteps) * 100 : 0;
+    const isDone = !isExecuting && executedPlan.length === totalSteps;
 
     return (
       <Card className="bg-card/50 border-border/50">
@@ -260,40 +285,65 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             <div>
               <h3 className="font-semibold flex items-center gap-2 mb-2"><ChevronsRight className="w-5 h-5"/> Execution Plan</h3>
               <div className="space-y-2">
-                {response.plan.map((step, index) => {
+                {plan.map((step, idx) => {
                   const action = 'action' in step ? step.action : 'command';
                   return (
-                    <div key={index} className={`p-3 rounded-md text-sm transition-all duration-300 ${isExecutingOrDone && index < executedSteps ? 'bg-green-500/10 border-l-4 border-green-500' : 'bg-muted/50 border-l-4 border-transparent'}`}>
+                    <div key={idx} className="p-3 rounded-md text-sm bg-muted/50 border-l-4 border-transparent">
                       <div className="flex items-center gap-3">
-                        {isExecutingOrDone && index < executedSteps ? <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{index + 1}</div>}
+                        <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{idx + 1}</div>
                         {renderStepIcon(action)}
                         <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
                         <Badge variant="outline" className="text-xs capitalize">{action}</Badge>
                       </div>
-                      <div className="mt-2 pl-7 text-xs space-y-1 text-muted-foreground">
-                        <p><strong className="font-medium text-foreground/90">Purpose:</strong> {step.purpose}</p>
-                        <p><strong className="font-medium text-foreground/90">Outcome:</strong> {step.expectedOutcome}</p>
-                      </div>
-                      {isExecutingOrDone && index < executedSteps && 'command' in step && (
-                        <CommandOutput command={step.command} outcome={step.expectedOutcome} />
-                      )}
                     </div>
                   )
                 })}
               </div>
             </div>
 
-            {(agentState === 'executing' || agentState === 'summarizing' || agentState === 'idle') && (
-                <div className="space-y-2 pt-2">
-                    <div className="flex justify-between items-center text-xs text-muted-foreground">
-                        <span>{agentState === 'executing' ? `Executing step ${executedSteps + 1}/${totalSteps}...` : 'Execution Complete'}</span>
-                        <span>{Math.round(executionProgress)}%</span>
-                    </div>
-                    <Progress value={executionProgress} className="h-2" />
+            {!isExecuting && !isDone && (
+                <div className="flex justify-end">
+                    <Button onClick={() => handleStartExecution(index)} disabled={agentState !== 'idle'}>
+                        <Play className="mr-2 h-4 w-4" />
+                        Execute Plan
+                    </Button>
                 </div>
             )}
             
-            {(agentState === 'summarizing' || agentState === 'idle') && (
+            {(isExecuting || isDone) && (
+                <div>
+                    <Separator className="my-4" />
+                    <h3 className="font-semibold flex items-center gap-2 mb-2"><Play className="w-5 h-5"/> Execution Log</h3>
+                     <div className="space-y-2">
+                        {executedPlan.map((step, idx) => {
+                          const action = 'action' in step ? step.action : 'command';
+                          return (
+                            <div key={idx} className={`p-3 rounded-md text-sm transition-all duration-300 bg-green-500/10 border-l-4 border-green-500`}>
+                              <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                {renderStepIcon(action)}
+                                <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
+                                <Badge variant="outline" className="text-xs capitalize">{action}</Badge>
+                              </div>
+                              { 'command' in step && (
+                                <CommandOutput command={step.command} outcome={step.expectedOutcome} />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                    <div className="space-y-2 pt-4">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>{isExecuting ? `Executing step ${executedPlan.length}/${totalSteps}...` : 'Execution Complete'}</span>
+                            <span>{Math.round(executionProgress)}%</span>
+                        </div>
+                        <Progress value={executionProgress} className="h-2" />
+                    </div>
+                </div>
+            )}
+            
+            {isDone && (
                 <>
                 <Separator />
                 <Alert variant="default" className="bg-green-500/10 border-green-500/30">
@@ -302,7 +352,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                     <AlertDescription>
                         {response.summary}
                          <div className="flex items-center gap-4 mt-2 text-xs">
-                           <span><strong className="text-foreground">{successfulSteps}</strong> successful steps</span>
+                           <span><strong className="text-foreground">{executedPlan.length}</strong> successful steps</span>
                            <span><strong className="text-foreground">0</strong> errors</span>
                         </div>
                     </AlertDescription>
@@ -312,7 +362,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                     <h4 className="font-semibold text-sm">Next Steps</h4>
                     <div className="flex flex-wrap gap-2">
                         {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
-                        <Button variant="default" size="sm" onClick={() => handleDownloadPatch(response.plan)}>
+                        <Button variant="default" size="sm" onClick={() => handleDownloadPatch(plan)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download Patch
                         </Button>
@@ -320,14 +370,13 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                 </div>
               </>
             )}
-
         </CardContent>
       </Card>
     );
   };
 
 
-  const renderMessageContent = (message: Message) => {
+  const renderMessageContent = (message: Message, index: number) => {
     if (typeof message.content === 'string') {
         return (
           <div className="flex flex-col items-end">
@@ -338,7 +387,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           </div>
         )
     }
-    return <AgentResponse response={message.content} />;
+    return <AgentResponse message={message} index={index} />;
   };
 
   const getAgentStatus = () => {
@@ -346,6 +395,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         case 'thinking': return 'Thinking...';
         case 'analyzing': return 'Analyzing request...';
         case 'planning': return 'Creating execution plan...';
+        case 'executing': return 'Executing plan...';
         case 'error': return 'An error occurred.';
         default: return null;
     }
@@ -368,11 +418,11 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
               {message.role === "user" && <User className="w-6 h-6 text-accent flex-shrink-0 order-2" />}
               <div className={`w-full ${message.role === 'user' ? 'max-w-[90%]' : ''}`}>
-                {renderMessageContent(message)}
+                {renderMessageContent(message, index)}
               </div>
             </div>
           ))}
-          {agentState !== 'idle' && agentState !== 'executing' && agentState !== 'summarizing' && agentState !== 'planning' && (
+          {agentState !== 'idle' && agentState !== 'summarizing' && (
              <div className="flex items-start gap-3">
                 <Bot className="w-6 h-6 text-primary flex-shrink-0" />
                  <div className="flex items-center gap-2 text-muted-foreground">
@@ -413,3 +463,5 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
+
+    
