@@ -62,7 +62,7 @@ const FileTreeItem = ({ item, level = 0, onOpenFile }: FileTreeItemProps) => {
 
     if (isFolder) {
         return (
-          <Collapsible defaultOpen={level === 0}>
+          <Collapsible key={item.path} defaultOpen={level === 0}>
             <CollapsibleTrigger className="w-full group">
               <div className="flex items-center py-1.5 px-3 rounded-md cursor-pointer hover:bg-muted" style={{ paddingLeft }}>
                   <ChevronRight className="w-4 h-4 mr-1 flex-shrink-0 transition-transform group-data-[state=open]:rotate-90" />
