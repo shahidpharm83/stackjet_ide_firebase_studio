@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { agenticFlow, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { Project, OpenFile } from '@/app/page';
+import type { Project, OpenFile, MainView } from '@/app/page';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { FileSystemTreeItem } from "@/components/panels/file-explorer";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,7 @@ type AiAssistantPanelProps = {
   onOpenFile: (path: string, handle: FileSystemFileHandle, content?: string) => void;
   onFileContentChange: (path: string, newContent: string) => void;
   getOpenFile: (path: string) => OpenFile | undefined;
+  setActiveMainView: (view: MainView) => void;
 };
 
 type ApiKey = {
@@ -83,7 +84,7 @@ const CommandOutput = ({ command, outcome, status }: { command: string; outcome:
 );
 
 
-export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile, onFileContentChange, getOpenFile }: AiAssistantPanelProps) {
+export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile, onFileContentChange, getOpenFile, setActiveMainView }: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
@@ -335,6 +336,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
                 }
             } else { // It's a command operation
+                 setActiveMainView('terminal');
                  const { command } = step;
                 if (command.startsWith('npm install')) {
                     const packageName = command.split('install')[1].trim();
@@ -356,12 +358,12 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         await writable.close();
                         
                         onOpenFile('package.json', pkgHandle, newPkgContent);
-                        stepResult = { status: 'success', outcome: `Successfully added ${packageName} to dependencies.` };
+                        stepResult = { status: 'success', outcome: `Successfully added ${packageName} to dependencies. You may need to run 'npm install' in the terminal.` };
                     } catch (e: any) {
                         stepResult = { status: 'error', outcome: `Failed to update package.json: ${e.message}` };
                     }
                 } else {
-                    stepResult = { status: 'success', outcome: `(Emulated) ${step.expectedOutcome}` };
+                    stepResult = { status: 'success', outcome: `(Emulated in UI) ${step.expectedOutcome}` };
                 }
             }
         } catch (error: any) {
@@ -410,7 +412,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     
     setAgentState("idle");
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile, setActiveMainView]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string, imageDataUri?: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];

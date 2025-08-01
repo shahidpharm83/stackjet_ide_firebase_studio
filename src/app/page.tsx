@@ -36,6 +36,8 @@ export interface OpenFile {
 }
 
 type LeftPanel = "files" | "ai";
+export type MainView = "editor" | "terminal";
+
 
 export default function Home() {
   const [project, setProject] = useState<Project | null>(null);
@@ -47,6 +49,7 @@ export default function Home() {
   const [isExecuting, setIsExecuting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [activeMainView, setActiveMainView] = useState<MainView>("editor");
   const { toast } = useToast();
   const { addRecentProject } = useRecentProjects();
 
@@ -82,6 +85,7 @@ export default function Home() {
 
   const handleOpenFile = useCallback(async (path: string, handle: FileSystemFileHandle, content?: string) => {
     const existingFile = openFiles.find(f => f.path === path);
+    setActiveMainView('editor');
 
     if (existingFile) {
         setActiveFile(path);
@@ -123,6 +127,7 @@ export default function Home() {
   
   const handleActiveFileChange = (path: string) => {
     setActiveFile(path);
+    setActiveMainView('editor');
   };
   
   const handleFileContentChange = useCallback((path: string, newContent: string) => {
@@ -289,6 +294,7 @@ export default function Home() {
                         onOpenFile={handleOpenFile}
                         onFileContentChange={handleFileContentChange}
                         getOpenFile={getOpenFile}
+                        setActiveMainView={setActiveMainView}
                     />
                 )}
               </Panel>
@@ -306,6 +312,7 @@ export default function Home() {
                   onFileContentChange={handleFileContentChange}
                   isExecuting={isExecuting}
                   hydrated={hydrated}
+                  projectOpen={!!project}
                 />
               </Panel>
             </PanelGroup>
