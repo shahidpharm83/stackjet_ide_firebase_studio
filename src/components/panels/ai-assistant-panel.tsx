@@ -452,6 +452,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       
       clearInterval(thinkingTimerRef.current);
       const thinkingEnd = Date.now();
+
+      const isReadOnlyPlan = result.plan.every(step => 'action' in step && step.action === 'read');
       
       const assistantMessage: Message = { 
           role: "assistant", 
@@ -460,12 +462,18 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
           executedPlan: [],
           isExecuting: false,
           summaryComplete: false,
-          isAwaitingExecution: true, // New flag
+          isAwaitingExecution: !isReadOnlyPlan,
           timings: { start: startTime, thinkingEnd }
       };
       
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-      setAgentState("awaiting_execution");
+
+      if (isReadOnlyPlan) {
+        // Auto-execute if it's just a read plan
+        startExecution(messages.length + 1, result.plan);
+      } else {
+        setAgentState("awaiting_execution");
+      }
 
 
     } catch (error: any) {
@@ -479,7 +487,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, project, uploadedFile]);
+  }, [agentState, agenticFlowWithRetry, project, uploadedFile, startExecution, messages.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
