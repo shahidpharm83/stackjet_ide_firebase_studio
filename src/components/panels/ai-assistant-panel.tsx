@@ -151,14 +151,14 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   
   const typeContent = (filePath: string, content: string, initialContent = ''): Promise<void> => {
     return new Promise(resolve => {
-        onFileContentChange(filePath, initialContent);
-        const lines = content.split('\n');
+        onOpenFile(filePath, {} as FileSystemFileHandle, initialContent); // We might not have a handle yet, so pass a dummy
         let currentContent = initialContent;
+        const lines = content.split('\n');
         let lineIndex = 0;
 
         function typeLine() {
             if (lineIndex < lines.length) {
-                currentContent = currentContent + (currentContent ? '\n' : '') + lines[lineIndex];
+                currentContent = (lineIndex > 0 ? currentContent + '\n' : '') + lines[lineIndex];
                 onFileContentChange(filePath, currentContent);
                 lineIndex++;
                 setTimeout(typeLine, 50); // Adjust typing speed here
@@ -195,40 +195,58 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 const rootHandle = project.handle;
                 
                 let fileHandle: FileSystemFileHandle;
+                let dirHandle: FileSystemDirectoryHandle;
+                const parts = fileName.split('/');
+                const name = parts.pop()!;
+                const dirPath = parts.join('/');
+
 
                 switch (action) {
                     case 'write':
-                        fileHandle = await getFileHandle(rootHandle, fileName, true);
-                        onOpenFile(fileName, fileHandle, ''); // Open empty file
-                        await typeContent(fileName, content);
+                        dirHandle = await getDirectoryHandle(rootHandle, dirPath, true);
+                        fileHandle = await dirHandle.getFileHandle(name, { create: true });
+                        await typeContent(fileName, content, '');
+                        onOpenFile(fileName, fileHandle, content);
                         const writableWrite = await fileHandle.createWritable();
                         await writableWrite.write(content);
                         await writableWrite.close();
                         stepResult = { status: 'success', outcome: `Wrote ${content.length} bytes to ${fileName}` };
                         break;
                     case 'edit':
-                         fileHandle = await getFileHandle(rootHandle, fileName, false);
+                         dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
+                         fileHandle = await dirHandle.getFileHandle(name, { create: false });
                          const existingFile = await fileHandle.getFile();
                          const existingContent = await existingFile.text();
-                         onOpenFile(fileName, fileHandle, existingContent);
                          await typeContent(fileName, content, existingContent);
+                         onOpenFile(fileName, fileHandle, content);
                          const writableEdit = await fileHandle.createWritable();
                          await writableEdit.write(content);
                          await writableEdit.close();
                          stepResult = { status: 'success', outcome: `Edited ${fileName}` };
                          break;
                     case 'delete':
-                        const parts = fileName.split('/');
-                        const name = parts.pop()!;
-                        const dirPath = parts.join('/');
-                        const dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
+                        dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
                         await dirHandle.removeEntry(name, { recursive: true });
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
+                        // Note: FileSystemHandle.move is not widely supported.
+                        // This is an emulation.
                         const oldHandle = await getFileHandle(rootHandle, fileName);
-                        await oldHandle.move(step.content || '');
-                        stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${step.content}` };
+                        const oldFile = await oldHandle.getFile();
+                        const oldContent = await oldFile.text();
+                        
+                        const newHandle = await getFileHandle(rootHandle, content, true);
+                         const writableRename = await newHandle.createWritable();
+                        await writableRename.write(oldContent);
+                        await writableRename.close();
+
+                        const oldParts = fileName.split('/');
+                        const oldName = oldParts.pop()!;
+                        const oldDirHandle = await getDirectoryHandle(rootHandle, oldParts.join('/'), false);
+                        await oldDirHandle.removeEntry(oldName);
+
+                        stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${content}` };
                         break;
                     default:
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
@@ -248,8 +266,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             ...stepResult,
         };
         
-        // This is a critical step: After each operation, we must refresh the file tree
-        // to get fresh handles for the next operation, preventing "stale handle" errors.
         await refreshFileTree();
 
         setMessages(prev => prev.map((msg, idx) => {
@@ -259,18 +275,16 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             return msg;
         }));
 
-         // Small delay between steps
         await new Promise(resolve => setTimeout(resolve, 200));
     }
     
-    // Final update after loop
     setMessages(prev => prev.map((msg, idx) => {
         if (idx === messageIndex) {
             const executionEndTime = Date.now();
             return {
                 ...msg,
                 isExecuting: false,
-                summaryComplete: true, // This triggers the summary
+                summaryComplete: true, 
                 timings: {
                     ...(msg.timings || { start: Date.now() }),
                     executionEnd: executionEndTime,
@@ -282,7 +296,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     }));
     
     setAgentState("idle");
-    // Final refresh after all operations are done
     await refreshFileTree();
   }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent]);
 
