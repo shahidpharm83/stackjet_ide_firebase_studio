@@ -51,6 +51,7 @@ const idb = {
 export default function useRecentProjects() {
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const loadRecentProjects = async () => {
@@ -80,6 +81,7 @@ export default function useRecentProjects() {
     };
 
     loadRecentProjects();
+    setHydrated(true);
   }, []);
 
   const addRecentProject = useCallback((newProjectHandle: FileSystemDirectoryHandle) => {
@@ -103,5 +105,5 @@ export default function useRecentProjects() {
     });
   }, []);
 
-  return { recentProjects, addRecentProject, isLoading };
+  return { recentProjects, addRecentProject, isLoading, hydrated };
 }

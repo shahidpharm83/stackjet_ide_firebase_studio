@@ -29,13 +29,8 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectLocation, setNewProjectLocation] = useState<FileSystemDirectoryHandle | null>(null);
   const [newProjectLocationPath, setNewProjectLocationPath] = useState<string>("");
-  const { recentProjects, addRecentProject } = useRecentProjects();
+  const { recentProjects, addRecentProject, hydrated } = useRecentProjects();
   const { toast } = useToast();
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   const handleSelectLocation = async () => {
      try {
