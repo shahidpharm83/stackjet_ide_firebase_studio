@@ -76,7 +76,7 @@ export default function Home() {
         <PanelGroup direction="horizontal" className="flex-1">
           {leftPanelVisible && (
             <>
-              <Panel defaultSize={30} minSize={15} className="flex flex-col">
+              <Panel defaultSize={20} minSize={15} className="flex flex-col">
                 <Tabs defaultValue="files" className="h-full flex flex-col">
                   <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b shrink-0">
                     <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
@@ -110,7 +110,7 @@ export default function Home() {
               {isTerminalOpen && (
                 <>
                   <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors" />
-                  <Panel defaultSize={15} minSize={10}>
+                  <Panel defaultSize={25} minSize={10}>
                     <TerminalPanel projectOpen={!!project} />
                   </Panel>
                 </>
