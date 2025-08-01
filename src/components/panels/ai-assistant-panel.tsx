@@ -231,7 +231,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         } : msg
     ));
     
-    let allSteps = [];
+    const allSteps: ExecutedStep[] = [];
     for (const step of plan) {
         const stepStartTime = Date.now();
         let stepResult: { status: 'success' | 'error'; outcome: string };
@@ -842,7 +842,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     </AlertDescription>
                 </Alert>
                 
-                <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="flex flex-col md:flex-row gap-4">
                     <div className="w-full md:w-1/2">
                         <OperationSummaryChart plan={executedPlan} />
                     </div>
@@ -869,7 +869,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     if (typeof message.content === 'string') {
         return (
           <div className="flex flex-col items-end">
-              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-[90%]">
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
                  {message.uploadedFile && message.uploadedFile.type.startsWith('image/') && (
                      <img 
                         src={message.uploadedFile.dataUri} 
@@ -916,7 +916,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
           {messages.map((message, index) => (
             <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
               {message.role === "user" && <User className="w-6 h-6 text-accent flex-shrink-0 order-2" />}
-              <div className={`w-full ${message.role === 'user' ? 'max-w-[90%]' : ''}`}>
+              <div className={`${message.role === 'user' ? 'max-w-[90%]' : 'w-full'}`}>
                 {renderMessageContent(message, index)}
               </div>
             </div>
