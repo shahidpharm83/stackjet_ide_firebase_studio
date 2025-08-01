@@ -154,7 +154,7 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
         <LeftActivityBar onToggle={() => setLeftPanelVisible(!leftPanelVisible)} />
         <PanelGroup direction="horizontal" className="flex-1">
-          {leftPanelVisible && (
+          {leftPanelVisible && hydrated && (
             <>
               <Panel defaultSize={20} minSize={15} className="flex flex-col">
                 <Tabs defaultValue="files" className="h-full flex flex-col">
@@ -212,7 +212,7 @@ export default function Home() {
               )}
             </PanelGroup>
           </Panel>
-          {rightPanelVisible && (
+          {rightPanelVisible && hydrated &&(
             <>
               <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
               <Panel defaultSize={30} minSize={15}>
