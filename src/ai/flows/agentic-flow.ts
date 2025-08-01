@@ -89,6 +89,7 @@ export const agenticFlow = ai.defineFlow(
       // Define a temporary prompt within the scope of the temporary AI instance.
       const tempPrompt = executionAi.definePrompt({
         name: 'agenticPrompt_temp', // Different name to avoid conflicts
+        model: 'googleai/gemini-2.0-flash', // Explicitly define the model
         input: { schema: AgenticFlowInputSchema.pick({ prompt: true }) },
         output: { schema: AgenticFlowOutputSchema },
         prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
