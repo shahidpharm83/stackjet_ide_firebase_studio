@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Settings, Sparkles, Bot, X, FolderOpen, File } from "lucide-react";
+import { Play, Settings, Sparkles, Bot, X, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
 import type { Project } from '@/app/page';
@@ -31,7 +31,9 @@ export default function Header({ project, onCloseProject, onOpenFolder }: Header
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="px-2">File</Button>
+              <Button variant="ghost" size="icon">
+                <FolderOpen className="h-4 w-4" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={onOpenFolder}>
