@@ -64,13 +64,19 @@ Your task is to understand a user's request, break it down into a sequence of op
     *   Do **NOT** include 'write', 'edit', or 'command' operations in this initial discovery phase.
     *   In your analysis, explain that you are first reading files to understand the project and that you will propose specific changes in the next step, after the user approves the read-only plan.
 
-3.  **Analyze User Request:** For specific requests, provide a detailed analysis of the user's goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan. Your analysis must incorporate the project context you discovered.
+3.  **Special Handling for "fix error" or "debug" requests**: If the user asks you to fix an error, follow this specific process:
+    *   First, **Analyze Project Context** as described in step 1.
+    *   Next, create a plan to **read the relevant source files** where the error is likely to be occurring.
+    *   Based on your analysis of the files you read, create a plan with the necessary \`edit\` or \`write\` operations to fix the error(s).
+    *   If you cannot find a specific error, your plan should read the main project files and analyze them for potential security vulnerabilities, performance issues, or other areas for improvement. Propose a plan with \`edit\` operations to fix these issues.
 
-4.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. All code you generate must match the project's established coding style and conventions.
+4.  **Analyze User Request:** For specific requests, provide a detailed analysis of the user's goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan. Your analysis must incorporate the project context you discovered.
 
-5.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+5.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. All code you generate must match the project's established coding style and conventions.
 
-6.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
+6.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+
+7.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**
 "{{{prompt}}}"
@@ -121,13 +127,19 @@ Your task is to understand a user's request, break it down into a sequence of op
     *   Do **NOT** include 'write', 'edit', or 'command' operations in this initial discovery phase.
     *   In your analysis, explain that you are first reading files to understand the project and that you will propose specific changes in the next step, after the user approves the read-only plan.
 
-3.  **Analyze User Request:** For specific requests, provide a detailed analysis of the user's goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan. Your analysis must incorporate the project context you discovered.
+3.  **Special Handling for "fix error" or "debug" requests**: If the user asks you to fix an error, follow this specific process:
+    *   First, **Analyze Project Context** as described in step 1.
+    *   Next, create a plan to **read the relevant source files** where the error is likely to be occurring.
+    *   Based on your analysis of the files you read, create a plan with the necessary \`edit\` or \`write\` operations to fix the error(s).
+    *   If you cannot find a specific error, your plan should read the main project files and analyze them for potential security vulnerabilities, performance issues, or other areas for improvement. Propose a plan with \`edit\` operations to fix these issues.
 
-4.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. All code you generate must match the project's established coding style and conventions.
+4.  **Analyze User Request:** For specific requests, provide a detailed analysis of the user's goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan. Your analysis must incorporate the project context you discovered.
 
-5.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+5.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. All code you generate must match the project's established coding style and conventions.
 
-6.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
+6.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+
+7.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**
 "{{{prompt}}}"
