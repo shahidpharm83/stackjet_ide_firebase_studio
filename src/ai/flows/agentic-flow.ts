@@ -15,12 +15,14 @@ const FileOperationSchema = z.object({
   fileName: z.string().describe('The full relative path of the file.'),
   action: z.enum(['write', 'read', 'edit', 'delete', 'rename', 'move']).describe('The file operation to perform.'),
   content: z.string().optional().describe('The content to write or edit. Required for write/edit actions.'),
-  description: z.string().describe('A short description of what this step does.'),
+  purpose: z.string().describe('A short, clear explanation of why this step is necessary.'),
+  expectedOutcome: z.string().describe('What the result of this step will be.'),
 });
 
 const CommandOperationSchema = z.object({
   command: z.string().describe('The shell command to execute.'),
-  description: z.string().describe('A short description of what this step does.'),
+  purpose: z.string().describe('A short, clear explanation of why this step is necessary.'),
+  expectedOutcome: z.string().describe('What the result of this step will be.'),
 });
 
 const PlanStepSchema = z.union([
@@ -54,7 +56,7 @@ Your task is to understand a user's request, break it down into a sequence of op
 
 **Your Process:**
 1.  **Analyze:** Briefly analyze the user's request to understand their goal.
-2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, delete, etc.) and shell commands. Each step must have a clear description.
+2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'.
 3.  **Summarize:** Provide a short summary of the entire plan.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 

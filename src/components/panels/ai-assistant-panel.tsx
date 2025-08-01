@@ -132,11 +132,17 @@ export default function AiAssistantPanel() {
               <h3 className="font-semibold flex items-center gap-2 mb-2"><ChevronsRight className="w-5 h-5"/> Execution Plan</h3>
               <div className="space-y-2">
                 {response.plan.map((step, index) => (
-                  <div key={index} className={`flex items-center gap-3 p-2 rounded-md text-sm transition-all duration-300 ${isExecutingOrDone && index < executedSteps ? 'bg-green-500/20' : 'bg-muted/50'}`}>
-                    {isExecutingOrDone && index < executedSteps ? <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 flex-shrink-0" />}
-                    {renderStepIcon('action' in step ? step.action : 'command')}
-                    <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
-                    <Badge variant="outline" className="text-xs">{ 'action' in step ? step.action : 'command' }</Badge>
+                  <div key={index} className={`p-3 rounded-md text-sm transition-all duration-300 ${isExecutingOrDone && index < executedSteps ? 'bg-green-500/10 border-l-4 border-green-500' : 'bg-muted/50 border-l-4 border-transparent'}`}>
+                    <div className="flex items-center gap-3">
+                      {isExecutingOrDone && index < executedSteps ? <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" /> : <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{index + 1}</div>}
+                      {renderStepIcon('action' in step ? step.action : 'command')}
+                      <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
+                      <Badge variant="outline" className="text-xs">{ 'action' in step ? step.action : 'command' }</Badge>
+                    </div>
+                    <div className="mt-2 pl-7 text-xs space-y-1 text-muted-foreground">
+                      <p><strong className="font-medium text-foreground/90">Purpose:</strong> {step.purpose}</p>
+                      <p><strong className="font-medium text-foreground/90">Outcome:</strong> {step.expectedOutcome}</p>
+                    </div>
                   </div>
                 ))}
               </div>
