@@ -64,10 +64,6 @@ export default function Header({ project, onCloseProject, onOpenFolder }: Header
             <Play />
             Run
           </Button>
-          <Button variant="ghost" size="sm" disabled={!project}>
-            <Sparkles />
-            AI Refactor
-          </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsModalOpen(true)}>
             <Settings className="h-4 w-4" />
           </Button>
