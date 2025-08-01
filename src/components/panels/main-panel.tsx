@@ -1,6 +1,5 @@
 import EditorPanel from "./editor-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { X, Code } from "lucide-react";
 import type { OpenFile } from "@/app/page";
 
@@ -41,17 +40,17 @@ export default function MainPanel({ openFiles, activeFile, onCloseFile, onActive
               className="h-full rounded-none relative data-[state=active]:bg-muted data-[state=active]:shadow-none pr-10"
             >
               {file.name}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 absolute right-2 top-1/2 -translate-y-1/2"
+              <div
+                role="button"
+                aria-label={`Close ${file.name}`}
+                className="h-6 w-6 absolute right-2 top-1/2 -translate-y-1/2 rounded-sm hover:bg-accent hover:text-accent-foreground flex items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCloseFile(file.path);
                 }}
               >
                 <X className="h-4 w-4" />
-              </Button>
+              </div>
             </TabsTrigger>
           ))}
         </TabsList>
