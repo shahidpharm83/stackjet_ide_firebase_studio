@@ -96,6 +96,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             if (nextStep >= totalSteps) {
                 clearInterval(interval);
                 setAgentState("summarizing");
+                setTimeout(() => setAgentState("idle"), 2000); // Reset to idle
             }
             return nextStep;
         });
@@ -163,8 +164,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
 
   const AgentResponse = ({ response, setInput }: { response: AgenticFlowOutput, setInput: (value: string) => void }) => {
     const totalSteps = response.plan.length;
-    const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing';
-    const successfulSteps = agentState === 'summarizing' ? totalSteps : executedSteps;
+    const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing' || agentState === 'idle';
+    const successfulSteps = (agentState === 'summarizing' || agentState === 'idle') ? totalSteps : executedSteps;
 
     return (
       <Card className="bg-card/50 border-border/50">
@@ -204,7 +205,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
               </div>
             </div>
 
-            {(agentState === 'executing' || agentState === 'summarizing') && (
+            {(agentState === 'executing' || agentState === 'summarizing' || agentState === 'idle') && (
                 <div className="space-y-2 pt-2">
                     <div className="flex justify-between items-center text-xs text-muted-foreground">
                         <span>{agentState === 'executing' ? `Executing step ${executedSteps + 1}/${totalSteps}...` : 'Execution Complete'}</span>
@@ -214,7 +215,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                 </div>
             )}
             
-            {agentState === 'summarizing' && (
+            {(agentState === 'summarizing' || agentState === 'idle') && (
                 <>
                 <Separator />
                 <Alert variant="default" className="bg-green-500/10 border-green-500/30">
