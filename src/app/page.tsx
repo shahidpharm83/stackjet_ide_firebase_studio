@@ -252,8 +252,8 @@ export default function Home() {
   };
 
   const toggleTerminal = () => {
-    setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal');
-  }
+    setActiveMainView(prev => (prev === "terminal" ? "editor" : "terminal"));
+  };
   
   if (!hydrated) {
     return null;
@@ -311,7 +311,6 @@ export default function Home() {
                   onActiveFileChange={handleActiveFileChange}
                   onFileContentChange={handleFileContentChange}
                   isExecuting={isExecuting}
-                  hydrated={hydrated}
                   projectOpen={!!project}
                   activeMainView={activeMainView}
                   setActiveMainView={setActiveMainView}

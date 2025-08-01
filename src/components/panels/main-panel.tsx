@@ -17,7 +17,6 @@ type MainPanelProps = {
   onActiveFileChange: (path: string) => void;
   onFileContentChange: (path: string, newContent: string) => void;
   isExecuting: boolean;
-  hydrated: boolean;
   projectOpen: boolean;
   activeMainView: MainView;
   setActiveMainView: (view: MainView) => void;
@@ -30,26 +29,24 @@ export default function MainPanel({
   onActiveFileChange,
   onFileContentChange,
   isExecuting,
-  hydrated,
   projectOpen,
   activeMainView,
   setActiveMainView
 }: MainPanelProps) {
   
   const [terminalPanelSize, setTerminalPanelSize] = useState(20);
-  const [isClient, setIsClient] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const noFilesOpen = openFiles.length === 0;
 
   useEffect(() => {
-    setIsClient(true);
+    setHydrated(true);
   }, []);
 
   const handleTabChange = (value: string) => {
     if (value === 'terminal') {
       setActiveMainView('terminal');
     } else {
-      // If switching to an editor tab, and terminal was the active view, switch back to editor view.
-      if(activeMainView === 'terminal') setActiveMainView('editor');
+      setActiveMainView('editor');
       onActiveFileChange(value);
     }
   }
@@ -66,8 +63,7 @@ export default function MainPanel({
   }, [activeMainView, terminalPanelSize]);
   
 
-  const activeValue = activeMainView === 'terminal' && !activeFile ? 'terminal' : activeFile || "";
-
+  const activeValue = activeMainView === 'terminal' ? 'terminal' : activeFile || "";
 
   if (!projectOpen) {
     return (
@@ -78,7 +74,7 @@ export default function MainPanel({
     );
   }
 
-  if (!isClient) {
+  if (!hydrated) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
         <Code className="w-16 h-16 mb-4" />
@@ -91,14 +87,14 @@ export default function MainPanel({
     <div className="flex-1 flex flex-col overflow-hidden h-full">
         <PanelGroup direction="vertical" onLayout={(layout) => setTerminalPanelSize(layout[1])}>
             <Panel defaultSize={80} minSize={20}>
-              {noFilesOpen ? (
+              {noFilesOpen && activeMainView === 'editor' ? (
                  <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
                     <Code className="w-16 h-16 mb-4" />
                     <p>No files are open.</p>
                     <p className="text-xs">Select a file from the explorer to begin editing.</p>
                   </div>
               ) : (
-                <Tabs value={activeFile || ""} onValueChange={handleTabChange} className="flex-1 flex flex-col h-full">
+                <Tabs value={activeValue} onValueChange={handleTabChange} className="flex-1 flex flex-col h-full">
                   <TabsList className="flex-shrink-0 h-12 p-0 border-b rounded-none justify-start bg-background">
                     {openFiles.map(file => (
                       <TabsTrigger 
@@ -120,6 +116,13 @@ export default function MainPanel({
                         </div>
                       </TabsTrigger>
                     ))}
+                    <TabsTrigger 
+                        value="terminal" 
+                        className="h-full rounded-none relative data-[state=active]:bg-muted data-[state=active]:shadow-none"
+                      >
+                        <TerminalIcon className="w-4 h-4 mr-2" />
+                        Terminal
+                      </TabsTrigger>
                   </TabsList>
 
                   {openFiles.map(file => (
@@ -131,25 +134,15 @@ export default function MainPanel({
                       />
                     </TabsContent>
                   ))}
+                   <TabsContent value="terminal" className="flex-1 mt-0 bg-background h-full">
+                        <TerminalPanel projectOpen={projectOpen} />
+                    </TabsContent>
                 </Tabs>
               )}
             </Panel>
             <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors data-[resize-handle-state=drag]:bg-primary" />
             <Panel defaultSize={20} minSize={5} maxSize={80} collapsible={true} collapsedSize={5}>
-                <Tabs value={activeMainView} onValueChange={(v) => setActiveMainView(v as MainView)} className="flex flex-col h-full">
-                    <TabsList className="flex-shrink-0 h-12 p-0 border-b rounded-none justify-start bg-background">
-                        <TabsTrigger value="terminal" className="h-full rounded-none relative data-[state=active]:bg-muted data-[state=active]:shadow-none">
-                            <TerminalIcon className="w-4 h-4 mr-2" />
-                            Terminal
-                        </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="editor" className="flex-1 mt-0 bg-background h-full">
-                        <div className="flex items-center justify-center h-full text-muted-foreground">Terminal is collapsed. Drag handle to expand or click the Terminal tab.</div>
-                    </TabsContent>
-                    <TabsContent value="terminal" className="flex-1 mt-0 bg-background h-full">
-                        <TerminalPanel projectOpen={projectOpen} />
-                    </TabsContent>
-                </Tabs>
+                 <TerminalPanel projectOpen={projectOpen} />
             </Panel>
         </PanelGroup>
     </div>
