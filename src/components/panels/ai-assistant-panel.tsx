@@ -25,8 +25,6 @@ type ExecutedStep = PlanStep & {
 type Timings = {
     start: number;
     thinkingEnd?: number;
-    analysisEnd?: number; // This can be merged with thinkingEnd if analysis is part of it
-    planningEnd?: number;
     executionStart?: number;
     executionEnd?: number;
     summaryEnd?: number;
@@ -42,7 +40,7 @@ type Message = {
   timings?: Timings;
 };
 
-type AgentState = "idle" | "thinking" | "analyzing" | "planning" | "executing" | "summarizing" | "error";
+type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error";
 
 type AiAssistantPanelProps = {
   project: Project | null;
@@ -125,6 +123,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     const messageToUpdate = messages[messageIndex];
     if (!messageToUpdate || typeof messageToUpdate.content !== 'object' || !messageToUpdate.content.plan) return;
 
+    setAgentState("executing");
     setMessages(prev => prev.map((msg, idx) => 
         idx === messageIndex ? { 
             ...msg, 
@@ -133,7 +132,6 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             timings: { ...(msg.timings || { start: Date.now() }), executionStart: Date.now() }
         } : msg
     ));
-    setAgentState("executing");
 
     const totalSteps = messageToUpdate.content.plan.length;
 
@@ -243,16 +241,13 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       clearInterval(thinkingTimerRef.current);
       const thinkingEnd = Date.now();
       
-      setAgentState("planning");
-      const planningEnd = Date.now() + 500; // Simulate planning time
-
       const assistantMessage: Message = { 
           role: "assistant", 
           content: result,
           plan: result.plan,
           executedPlan: [],
           isExecuting: false,
-          timings: { start: startTime, thinkingEnd, planningEnd }
+          timings: { start: startTime, thinkingEnd }
       };
       
       setMessages((prevMessages) => {
@@ -373,11 +368,6 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <h3 className="font-semibold flex items-center gap-2"><ChevronsRight className="w-5 h-5"/> Execution Plan ({plan.length} steps)</h3>
-                {timings?.planningEnd && timings.thinkingEnd && (
-                  <span className="text-xs text-muted-foreground">
-                    Planning: {formatTime(timings.planningEnd - timings.thinkingEnd)}
-                  </span>
-                )}
               </div>
               <div className="space-y-2">
                 {plan.map((step, idx) => {
@@ -500,7 +490,6 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   const getAgentStatus = () => {
     switch (agentState) {
         case 'thinking': return `Thinking... (${thinkingTime}s)`;
-        case 'planning': return 'Creating execution plan...';
         case 'executing': return 'Executing plan...';
         case 'error': return 'An error occurred.';
         default: return null;
@@ -569,3 +558,5 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
+
+    
