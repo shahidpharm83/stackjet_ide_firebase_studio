@@ -162,12 +162,15 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         if (lastMessage.role === 'user' && !lastMessage.timestamp) {
             setMessages(prev => {
                 const newMessages = [...prev];
-                newMessages[newMessages.length - 1].timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const last = newMessages[newMessages.length - 1];
+                if (last.role === 'user' && !last.timestamp) {
+                    last.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
                 return newMessages;
             });
         }
     }
-  }, [messages, agentState]);
+  }, [messages]);
   
   // Helper to get a directory handle, creating it if it doesn't exist
   const getDirectoryHandle = useCallback(async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemDirectoryHandle> => {
