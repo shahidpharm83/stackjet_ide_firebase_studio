@@ -62,13 +62,15 @@ export default function Home() {
   }, [project?.handle]);
 
   const handleOpenFile = useCallback(async (path: string, handle: FileSystemFileHandle, content?: string) => {
-    if (openFiles.some(f => f.path === path)) {
-      setActiveFile(path);
-      // If content is provided, update it for the already open file.
-      if (typeof content !== 'undefined') {
-          setOpenFiles(prev => prev.map(f => f.path === path ? { ...f, content } : f));
-      }
-      return;
+    const existingFile = openFiles.find(f => f.path === path);
+
+    if (existingFile) {
+        setActiveFile(path);
+        // If new content is provided, update it for the already open file.
+        if (typeof content !== 'undefined' && existingFile.content !== content) {
+            setOpenFiles(prev => prev.map(f => f.path === path ? { ...f, content } : f));
+        }
+        return;
     }
 
     try {
