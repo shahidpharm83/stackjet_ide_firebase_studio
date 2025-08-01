@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { agenticFlow, AgenticFlowOutput, AgenticFlowInput } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import OperationSummaryChart from "@/components/charts/operation-summary-chart";
 import type { Project } from '@/app/page';
 
 
@@ -356,14 +357,19 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                     </AlertDescription>
                 </Alert>
                 
-                <div className="space-y-2">
-                    <h4 className="font-semibold text-sm">Next Steps</h4>
-                    <div className="flex flex-wrap gap-2">
-                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
-                        <Button variant="default" size="sm" onClick={() => handleDownloadPatch(plan)}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Patch
-                        </Button>
+                <div className="flex flex-col md:flex-row gap-4 items-center">
+                    <div className="w-full md:w-1/2">
+                        <OperationSummaryChart plan={executedPlan} />
+                    </div>
+                    <div className="w-full md:w-1/2 space-y-2">
+                        <h4 className="font-semibold text-sm">Next Steps</h4>
+                        <div className="flex flex-wrap gap-2">
+                            {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
+                            <Button variant="default" size="sm" onClick={() => handleDownloadPatch(plan)}>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download Patch
+                            </Button>
+                        </div>
                     </div>
                 </div>
               </>
@@ -461,7 +467,3 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
-
-    
-
-    
