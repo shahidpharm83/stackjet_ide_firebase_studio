@@ -216,16 +216,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     });
   };
 
-  const handleOpenFileWithContent = async (path: string, content: string) => {
-    if (!project) return;
-    try {
-        const handle = await getFileHandle(project.handle, path, true);
-        onOpenFile(path, handle, content);
-    } catch (error) {
-        console.error(`Error opening file ${path} with content:`, error);
-    }
-  }
-
 
   const startExecution = useCallback(async (messageIndex: number, plan: PlanStep[]) => {
     if (!plan || plan.length === 0 || !project) return;
@@ -248,68 +238,93 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         try {
             if ('action' in step) { // It's a file operation
                 const { action, fileName, content = '' } = step;
-
                 const rootHandle = project.handle;
-                
-                let fileHandle: FileSystemFileHandle;
                 
                 switch (action) {
                     case 'write':
-                        fileHandle = await getFileHandle(rootHandle, fileName, true);
-                        onOpenFile(fileName, fileHandle, ''); // Open with empty content first
+                        const whandle = await getFileHandle(rootHandle, fileName, true);
+                        onOpenFile(fileName, whandle, ''); 
                         await typeContent(fileName, content, '');
                         stepResult = { status: 'success', outcome: `Wrote ${content.length} bytes to ${fileName}` };
                         break;
+
                     case 'edit':
-                         fileHandle = await getFileHandle(rootHandle, fileName, true); // Use true to create if not exists
+                         let ehandle: FileSystemFileHandle;
                          let existingContent = '';
                          try {
-                           const fileToRead = await fileHandle.getFile();
+                           ehandle = await getFileHandle(rootHandle, fileName, false);
+                           const fileToRead = await ehandle.getFile();
                            existingContent = await fileToRead.text();
                          } catch (e) {
-                           // File didn't exist, which is fine for an edit. existingContent is empty.
+                           // File doesn't exist, treat it as a write.
+                           ehandle = await getFileHandle(rootHandle, fileName, true);
+                           existingContent = '';
                          }
-                         onOpenFile(fileName, fileHandle, existingContent); // Ensure file is open before typing
+                         onOpenFile(fileName, ehandle, existingContent);
                          await typeContent(fileName, content, existingContent);
                          stepResult = { status: 'success', outcome: `Edited ${fileName}` };
                          break;
+
                     case 'delete':
-                        const pathParts = fileName.split('/').filter(p => p);
-                        const fileToDelete = pathParts.pop();
-                        if (!fileToDelete) {
-                            throw new Error(`Invalid file name for deletion: ${fileName}`);
+                        try {
+                            const pathParts = fileName.split('/').filter(p => p);
+                            const fileToDelete = pathParts.pop();
+                            if (!fileToDelete) throw new Error(`Invalid file name for deletion: ${fileName}`);
+                            
+                            const dirPath = pathParts.join('/');
+                            const dirHandle = dirPath ? await getDirectoryHandle(rootHandle, dirPath, false) : rootHandle;
+                            await dirHandle.removeEntry(fileToDelete, { recursive: false });
+                            stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
+                        } catch (e: any) {
+                            if (e.name === 'NotFoundError') {
+                                stepResult = { status: 'error', outcome: `File not found: ${fileName}` };
+                            } else {
+                                throw e;
+                            }
                         }
-                        const dirPath = pathParts.join('/');
-                        const dirHandle = dirPath ? await getDirectoryHandle(rootHandle, dirPath, false) : rootHandle;
-                        await dirHandle.removeEntry(fileToDelete, { recursive: false });
-                        stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
+                    
                     case 'rename':
-                        // Note: FileSystemHandle.move is not widely supported.
-                        // This is an emulation.
-                        const oldHandle = await getFileHandle(rootHandle, fileName);
-                        const oldFile = await oldHandle.getFile();
-                        const oldContent = await oldFile.text();
-                        
-                        const newHandle = await getFileHandle(rootHandle, content, true);
-                         const writableRename = await newHandle.createWritable();
-                        await writableRename.write(oldContent);
-                        await writableRename.close();
+                        try {
+                            const oldHandle = await getFileHandle(rootHandle, fileName);
+                            const oldFile = await oldHandle.getFile();
+                            const oldContent = await oldFile.text();
+                            
+                            const newHandle = await getFileHandle(rootHandle, content, true);
+                            const writableRename = await newHandle.createWritable();
+                            await writableRename.write(oldContent);
+                            await writableRename.close();
 
-                        const oldParts = fileName.split('/');
-                        const oldName = oldParts.pop()!;
-                        const oldDirHandle = await getDirectoryHandle(rootHandle, oldParts.join('/'), false);
-                        await oldDirHandle.removeEntry(oldName);
-
-                        stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${content}` };
+                            const oldParts = fileName.split('/');
+                            const oldName = oldParts.pop()!;
+                            const oldDirHandle = await getDirectoryHandle(rootHandle, oldParts.join('/'), false);
+                            await oldDirHandle.removeEntry(oldName);
+                            stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${content}` };
+                        } catch (e: any) {
+                            if (e.name === 'NotFoundError') {
+                                stepResult = { status: 'error', outcome: `Source file not found: ${fileName}` };
+                            } else {
+                                throw e;
+                            }
+                        }
                         break;
+
                     case 'read':
-                        fileHandle = await getFileHandle(rootHandle, fileName);
-                        const file = await fileHandle.getFile();
-                        const fileContent = await file.text();
-                        const truncatedContent = fileContent.length > 500 ? fileContent.substring(0, 500) + '...' : fileContent;
-                        stepResult = { status: 'success', outcome: `Read ${fileName}:\n\n${truncatedContent}` };
+                        try {
+                            const rhandle = await getFileHandle(rootHandle, fileName);
+                            const file = await rhandle.getFile();
+                            const fileContent = await file.text();
+                            const truncatedContent = fileContent.length > 500 ? fileContent.substring(0, 500) + '...' : fileContent;
+                            stepResult = { status: 'success', outcome: `Read ${fileName}:\n\n${truncatedContent}` };
+                        } catch (e: any) {
+                             if (e.name === 'NotFoundError') {
+                                stepResult = { status: 'error', outcome: `File not found: ${fileName}` };
+                            } else {
+                                throw e;
+                            }
+                        }
                         break;
+
                     default:
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
                 }
@@ -851,7 +866,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     if (typeof message.content === 'string') {
         return (
           <div className="flex flex-col items-end">
-              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-full">
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-[90%]">
                  {message.uploadedFile && message.uploadedFile.type.startsWith('image/') && (
                      <img 
                         src={message.uploadedFile.dataUri} 
@@ -985,3 +1000,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    
