@@ -36,7 +36,7 @@ export interface OpenFile {
 }
 
 type LeftPanel = "files" | "ai";
-export type MainView = "editor" | "terminal";
+export type MainView = "editor";
 
 
 export default function Home() {
@@ -252,11 +252,7 @@ export default function Home() {
   };
   
   if (!hydrated) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">
-        <Loader className="h-8 w-8 animate-spin" />
-      </div>
-    );
+    return null;
   }
 
   return (

@@ -25,14 +25,6 @@ export default function MainPanel({
   projectOpen,
 }: MainPanelProps) {
   
-  if (!hydrated) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
-        <Code className="w-16 h-16 mb-4" />
-      </div>
-    );
-  }
-
   const noFilesOpen = openFiles.length === 0;
 
   return (
