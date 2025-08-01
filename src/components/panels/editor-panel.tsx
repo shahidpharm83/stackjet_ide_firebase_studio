@@ -27,10 +27,13 @@ export default HelloWorld;
 // A simple syntax highlighter for demonstration
 function SyntaxHighlighter({ code }: { code: string }) {
   const highlight = (line: string) => {
-    // Escape HTML entities first to prevent conflicts with syntax highlighting spans
-    let escapedLine = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    escapedLine = escapedLine
+    // All of these replacements are on a line that's been HTML-escaped
+    const highlightedLine = line
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
       .replace(
         /\b(import|from|function|const|if|return|export|default)\b/g,
         '<span class="text-fuchsia-400">$&</span>'
@@ -39,14 +42,14 @@ function SyntaxHighlighter({ code }: { code: string }) {
         /\b(React|HelloWorld|console)\b/g,
         '<span class="text-accent">$&</span>'
       )
-      .replace(/(".*?")/g, '<span class="text-amber-400">$&</span>')
+      .replace(/(&quot;.*?&quot;)/g, '<span class="text-amber-400">$&</span>')
       .replace(/(\/\/.*)/g, '<span class="text-green-500">$&</span>')
       .replace(
         /(&lt;h1.*?&gt;|&lt;\/h1&gt;)/g,
         '<span class="text-gray-400">$&</span>'
       );
-    
-    return escapedLine;
+
+    return highlightedLine;
   };
   
   const lineWithError = '  const b = 2; // Potential error here';
