@@ -69,22 +69,33 @@ function SyntaxHighlighter({ code }: { code: string }) {
   );
 }
 
+type EditorPanelProps = {
+  projectOpen: boolean;
+};
 
-export default function EditorPanel() {
+export default function EditorPanel({ projectOpen }: EditorPanelProps) {
   return (
     <div className="h-full flex flex-col">
-       <div className="flex-shrink-0 p-2 border-b border-border flex items-center justify-between h-12">
-        <span className="font-medium text-foreground">index.js</span>
-        <div className="flex items-center gap-2">
-            <Badge variant="secondary">JavaScript</Badge>
-            <Badge variant="destructive">1 Error</Badge>
+      {!projectOpen ? (
+         <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <p>No file opened. Open a folder to begin.</p>
         </div>
-       </div>
-      <ScrollArea className="flex-1">
-          <div className="p-4">
-              <SyntaxHighlighter code={code} />
+      ) : (
+        <>
+          <div className="flex-shrink-0 p-2 border-b border-border flex items-center justify-between h-12">
+            <span className="font-medium text-foreground">index.js</span>
+            <div className="flex items-center gap-2">
+                <Badge variant="secondary">JavaScript</Badge>
+                <Badge variant="destructive">1 Error</Badge>
+            </div>
           </div>
-      </ScrollArea>
+          <ScrollArea className="flex-1">
+              <div className="p-4">
+                  <SyntaxHighlighter code={code} />
+              </div>
+          </ScrollArea>
+        </>
+      )}
     </div>
   );
 }

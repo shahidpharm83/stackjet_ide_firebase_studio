@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Header from "@/components/layout/header";
 import AiAssistantPanel from "@/components/panels/ai-assistant-panel";
-import FileExplorer from "@/components/panels/file-explorer";
+import FileExplorer, { getDirectoryTree, FileSystemTreeItem } from "@/components/panels/file-explorer";
 import MainPanel from "@/components/panels/main-panel";
 import PreviewPanel from "@/components/panels/preview-panel";
 import StatusBar from "@/components/layout/status-bar";
@@ -14,12 +14,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { File, Bot } from "lucide-react";
 import TerminalPanel from "@/components/panels/terminal-panel";
 
+export interface Project {
+  name: string;
+  handle: FileSystemDirectoryHandle;
+  tree: FileSystemTreeItem[];
+}
+
 export default function Home() {
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [project, setProject] = useState<Project | null>(null);
+
+  const handleOpenFolder = useCallback(async () => {
+    try {
+      if ('showDirectoryPicker' in window) {
+        const directoryHandle = await (window as any).showDirectoryPicker();
+        const tree = await getDirectoryTree(directoryHandle);
+        setProject({
+          name: directoryHandle.name,
+          handle: directoryHandle,
+          tree: tree
+        });
+      } else {
+        alert('Your browser does not support the File System Access API.');
+      }
+    } catch (error) {
+      console.error('Error opening directory:', error);
+    }
+  }, []);
+
+  const handleCloseProject = () => {
+    setProject(null);
+    // Here you would also clean up other components' states as needed,
+    // for example, closing open files in the editor.
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
-      <Header />
+      <Header project={project} onCloseProject={handleCloseProject} />
       <div className="flex flex-1 overflow-hidden">
         <SidebarProvider>
           <div className="flex flex-1">
@@ -37,7 +68,10 @@ export default function Home() {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="files" className="flex-1 overflow-y-auto">
-                  <FileExplorer />
+                  <FileExplorer 
+                    project={project} 
+                    onOpenFolder={handleOpenFolder} 
+                  />
                 </TabsContent>
                 <TabsContent value="ai" className="flex-1">
                   <AiAssistantPanel />
@@ -45,11 +79,11 @@ export default function Home() {
               </Tabs>
             </Sidebar>
             <div className="flex-1 flex flex-col overflow-hidden">
-              <MainPanel />
-              {isTerminalOpen && <TerminalPanel />}
+              <MainPanel projectOpen={!!project} />
+              {isTerminalOpen && <TerminalPanel projectOpen={!!project} />}
             </div>
             <Sidebar side="right" className="flex-1 border-l border-border" collapsible="offcanvas" defaultOpen={false}>
-              <PreviewPanel />
+              <PreviewPanel projectOpen={!!project} />
             </Sidebar>
             <RightActivityBar />
           </div>

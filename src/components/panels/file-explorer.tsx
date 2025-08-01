@@ -1,12 +1,13 @@
 "use client"
-import React, { useState, useCallback } from 'react'
+import React from 'react'
 import { Folder, FileText, ChevronRight, FolderOpen } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import type { Project } from '@/app/page';
 
 // Define the structure for a file or folder in our tree
-interface FileSystemTreeItem {
+export interface FileSystemTreeItem {
   name: string;
   kind: 'file' | 'directory';
   handle: FileSystemHandle;
@@ -14,7 +15,7 @@ interface FileSystemTreeItem {
 }
 
 // Function to recursively build the file tree from a directory handle
-async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandle): Promise<FileSystemTreeItem[]> {
+export async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandle): Promise<FileSystemTreeItem[]> {
     const tree: FileSystemTreeItem[] = [];
     for await (const handle of directoryHandle.values()) {
         if (handle.kind === 'directory') {
@@ -74,43 +75,29 @@ const FileTreeItem = ({ item, level = 0 }: { item: FileSystemTreeItem; level?: n
     );
 };
 
+type FileExplorerProps = {
+  project: Project | null;
+  onOpenFolder: () => void;
+};
 
-export default function FileExplorer() {
-  const [fileTree, setFileTree] = useState<FileSystemTreeItem[]>([]);
-  const [projectTitle, setProjectTitle] = useState('File Explorer');
-
-  const handleOpenFolder = useCallback(async () => {
-    try {
-      if ('showDirectoryPicker' in window) {
-        const directoryHandle = await (window as any).showDirectoryPicker();
-        const tree = await getDirectoryTree(directoryHandle);
-        setFileTree(tree);
-        setProjectTitle(directoryHandle.name);
-      } else {
-        alert('Your browser does not support the File System Access API.');
-      }
-    } catch (error) {
-      console.error('Error opening directory:', error);
-    }
-  }, []);
-
+export default function FileExplorer({ project, onOpenFolder }: FileExplorerProps) {
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
       <div className="p-2 flex justify-between items-center border-b border-border">
-          <span className="text-sm font-semibold truncate pl-2">{projectTitle}</span>
+          <span className="text-sm font-semibold truncate pl-2">{project?.name ?? 'File Explorer'}</span>
           <div>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleOpenFolder} title="Open Folder">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onOpenFolder} title="Open Folder">
               <FolderOpen className="w-4 h-4" />
             </Button>
           </div>
       </div>
        <ScrollArea className="flex-1 p-2">
-        {fileTree.length > 0 ? (
-            fileTree.map(item => <FileTreeItem key={item.name} item={item} />)
+        {project?.tree && project.tree.length > 0 ? (
+            project.tree.map(item => <FileTreeItem key={item.name} item={item} />)
         ) : (
             <div className="p-4 text-center text-muted-foreground text-sm">
                 <p>No folder opened.</p>
-                <Button variant="link" size="sm" onClick={handleOpenFolder}>Open a local folder</Button> 
+                <Button variant="link" size="sm" onClick={onOpenFolder}>Open a local folder</Button> 
                 <p className="text-xs mt-2">to start editing.</p>
             </div>
         )}

@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 
 export default function AiAssistantPanel() {
+  // This is a placeholder for project state. In a real app, you'd pass this as a prop.
+  const projectOpen = true; 
+
   return (
     <div className="flex flex-col h-full bg-background">
       <ScrollArea className="flex-1 p-4">
@@ -142,14 +145,15 @@ export default function AiAssistantPanel() {
       <div className="p-4 border-t border-border">
         <div className="relative">
           <Textarea
-            placeholder="Type your prompt here or use the microphone..."
+            placeholder={projectOpen ? "Type your prompt here..." : "Open a project to use the AI Assistant."}
             className="pr-20 min-h-[60px] resize-none"
+            disabled={!projectOpen}
           />
           <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" disabled={!projectOpen}>
               <Mic className="w-5 h-5" />
             </Button>
-            <Button size="icon">
+            <Button size="icon" disabled={!projectOpen}>
               <Send className="w-5 h-5" />
             </Button>
           </div>

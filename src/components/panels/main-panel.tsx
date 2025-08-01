@@ -1,9 +1,13 @@
 import EditorPanel from "./editor-panel";
 
-export default function MainPanel() {
+type MainPanelProps = {
+  projectOpen: boolean;
+};
+
+export default function MainPanel({ projectOpen }: MainPanelProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden h-full">
-        <EditorPanel />
+        <EditorPanel projectOpen={projectOpen} />
     </div>
   );
 }
