@@ -2,10 +2,10 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Play, Settings, Bot, X, FolderOpen, Download, CircleDashed, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
-import ProjectModal from "@/components/modals/project-modal";
 import type { Project } from '@/app/page';
 import {
   DropdownMenu,
@@ -13,6 +13,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+const ProjectModal = dynamic(() => import('@/components/modals/project-modal'), {
+  ssr: false,
+});
 
 type HeaderProps = {
   project: Project | null;
@@ -92,11 +96,13 @@ export default function Header({
         </div>
       </header>
       <ApiKeyModal isOpen={isApiKeyModalOpen} onOpenChange={setIsApiKeyModalOpen} />
-      <ProjectModal 
-        isOpen={isProjectModalOpen} 
-        onOpenChange={onProjectModalOpenChange}
-        openProject={openProject}
-      />
+      {isProjectModalOpen && (
+        <ProjectModal 
+          isOpen={isProjectModalOpen} 
+          onOpenChange={onProjectModalOpenChange}
+          openProject={openProject}
+        />
+      )}
     </>
   );
 }
