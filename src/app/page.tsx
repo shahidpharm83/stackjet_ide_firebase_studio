@@ -42,6 +42,11 @@ export default function Home() {
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
 
   const refreshFileTree = useCallback(async () => {
@@ -190,6 +195,7 @@ export default function Home() {
                   onActiveFileChange={handleActiveFileChange}
                   onFileContentChange={handleFileContentChange}
                   isExecuting={isExecuting}
+                  hydrated={hydrated}
                 />
               </Panel>
               {isTerminalOpen && (

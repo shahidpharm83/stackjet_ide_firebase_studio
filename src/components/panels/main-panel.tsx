@@ -10,6 +10,7 @@ type MainPanelProps = {
   onActiveFileChange: (path: string) => void;
   onFileContentChange: (path: string, newContent: string) => void;
   isExecuting: boolean;
+  hydrated: boolean;
 };
 
 export default function MainPanel({ 
@@ -18,7 +19,8 @@ export default function MainPanel({
   onCloseFile, 
   onActiveFileChange,
   onFileContentChange,
-  isExecuting
+  isExecuting,
+  hydrated
 }: MainPanelProps) {
 
   const getFileByPath = (path: string | null) => {
@@ -28,7 +30,7 @@ export default function MainPanel({
 
   const currentFile = getFileByPath(activeFile);
   
-  if (openFiles.length === 0) {
+  if (!hydrated || openFiles.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
         <Code className="w-16 h-16 mb-4" />
