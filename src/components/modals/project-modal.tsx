@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Folder, History, Plus, Briefcase, FolderOpen } from "lucide-react";
+import { Folder, History, Plus, Briefcase, FolderOpen, FolderSearch } from "lucide-react";
 import useRecentProjects from "@/hooks/use-recent-projects";
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -27,8 +27,35 @@ type ProjectModalProps = {
 
 export default function ProjectModal({ isOpen, onOpenChange, openProject }: ProjectModalProps) {
   const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectLocation, setNewProjectLocation] = useState<FileSystemDirectoryHandle | null>(null);
+  const [newProjectLocationPath, setNewProjectLocationPath] = useState<string>("");
   const { recentProjects, addRecentProject } = useRecentProjects();
   const { toast } = useToast();
+
+  const handleSelectLocation = async () => {
+     try {
+      if ('showDirectoryPicker' in window) {
+        const directoryHandle = await (window as any).showDirectoryPicker({
+            id: 'new-project-location',
+            mode: 'readwrite',
+            startIn: 'desktop'
+        });
+        setNewProjectLocation(directoryHandle);
+        setNewProjectLocationPath(directoryHandle.name);
+      } else {
+        alert('Your browser does not support the File System Access API.');
+      }
+    } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error("Error selecting directory:", error);
+           toast({
+            variant: "destructive",
+            title: "Could not select directory",
+            description: error.message,
+          });
+        }
+    }
+  }
 
   const handleCreateNewProject = async () => {
     if (!newProjectName.trim()) {
@@ -39,17 +66,17 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
       });
       return;
     }
+     if (!newProjectLocation) {
+      toast({
+        variant: "destructive",
+        title: "Project Location Required",
+        description: "Please select a location for your new project.",
+      });
+      return;
+    }
     
     try {
-      if ('showDirectoryPicker' in window) {
-        // This opens a picker to select a PARENT directory for the new project
-        const parentDirHandle = await (window as any).showDirectoryPicker({
-            id: 'new-project-location',
-            mode: 'readwrite',
-            startIn: 'desktop'
-        });
-        // Then we create the new project directory inside the selected parent
-        const newProjectHandle = await parentDirHandle.getDirectoryHandle(newProjectName, { create: true });
+        const newProjectHandle = await newProjectLocation.getDirectoryHandle(newProjectName, { create: true });
         
         // Create a default package.json
         const packageJsonHandle = await newProjectHandle.getFileHandle('package.json', { create: true });
@@ -81,9 +108,6 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
         openProject(newProjectHandle);
         addRecentProject(newProjectHandle);
         onOpenChange(false);
-      } else {
-        alert('Your browser does not support the File System Access API.');
-      }
     } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error("Error creating new project:", error);
@@ -185,7 +209,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
           <TabsContent value="new" className="mt-4">
             <div className="space-y-4 py-4 h-72">
                 <p className="text-sm text-muted-foreground">
-                    This will create a new folder on your local machine. You will be prompted to select a parent directory to save it in.
+                    This will create a new folder on your local machine.
                 </p>
                 <div className="space-y-2">
                     <Label htmlFor="project-name">Project Name</Label>
@@ -195,6 +219,21 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
                         value={newProjectName}
                         onChange={(e) => setNewProjectName(e.target.value)}
                     />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="project-location">Project Location</Label>
+                    <div className="flex gap-2">
+                        <Input 
+                            id="project-location" 
+                            placeholder="Select a parent directory..."
+                            value={newProjectLocationPath}
+                            readOnly
+                        />
+                        <Button variant="outline" onClick={handleSelectLocation}>
+                            <FolderSearch className="mr-2" />
+                            Select Location
+                        </Button>
+                    </div>
                 </div>
             </div>
              <DialogFooter>
