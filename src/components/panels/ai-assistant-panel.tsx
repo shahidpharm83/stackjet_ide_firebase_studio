@@ -104,7 +104,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
   
   const startExecution = useCallback((messageIndex: number) => {
     const messageToUpdate = messages[messageIndex];
-    if (typeof messageToUpdate.content !== 'object' || !messageToUpdate.content.plan) return;
+    if (!messageToUpdate || typeof messageToUpdate.content !== 'object' || !messageToUpdate.content.plan) return;
 
     setMessages(prev => prev.map((msg, idx) => 
         idx === messageIndex ? { ...msg, isExecuting: true, executedPlan: [] } : msg
@@ -198,12 +198,17 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           executedPlan: [],
           isExecuting: false,
       };
-      setMessages((prev) => [...prev, assistantMessage]);
-
-      setTimeout(() => {
-        const newMessageIndex = messages.length + 1; // +1 because state updates are async
-        startExecution(newMessageIndex);
-      }, 1500); // Delay before auto-execution starts
+      
+      setMessages((prevMessages) => {
+        const newMessages = [...prevMessages, assistantMessage];
+        const newAssistantMessageIndex = newMessages.length - 1;
+        
+        setTimeout(() => {
+            startExecution(newAssistantMessageIndex);
+        }, 1500);
+        
+        return newMessages;
+      });
 
 
     } catch (error: any) {
@@ -216,7 +221,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, messages.length, startExecution]);
+  }, [agentState, agenticFlowWithRetry, startExecution]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -467,3 +472,5 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
+
+    
