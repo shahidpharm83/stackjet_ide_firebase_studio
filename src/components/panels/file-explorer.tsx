@@ -1,4 +1,4 @@
-import { Folder, FileText, ChevronDown, ChevronRight, Plus, UploadCloud } from 'lucide-react';
+import { Folder, FileText, ChevronDown, Plus, UploadCloud } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
 
@@ -59,7 +59,7 @@ const FileTreeItem = ({ item, level = 0 }: { item: any; level?: number }) => {
 
 export default function FileExplorer() {
   return (
-    <aside className="w-64 flex flex-col shrink-0">
+    <aside className="w-full h-full flex flex-col shrink-0">
       <div className="p-2 border-b border-border flex items-center justify-between h-12">
         <h2 className="font-semibold text-base">Files</h2>
         <div className="flex items-center gap-1">

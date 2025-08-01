@@ -2,7 +2,7 @@ import { Eye } from 'lucide-react';
 
 export default function PreviewPanel() {
   return (
-    <aside className="flex-1 flex flex-col">
+    <aside className="flex-1 flex flex-col h-full">
        <div className="p-2 border-b border-border flex items-center h-12">
         <h2 className="font-semibold text-base flex items-center gap-2">
             <Eye className="w-5 h-5" />
