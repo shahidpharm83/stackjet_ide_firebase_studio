@@ -11,7 +11,7 @@ import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { File, Bot, Download } from "lucide-react";
+import { File, Bot } from "lucide-react";
 import TerminalPanel from "@/components/panels/terminal-panel";
 import {
   PanelGroup,
@@ -20,7 +20,8 @@ import {
 } from "react-resizable-panels";
 import JSZip from 'jszip';
 import { useToast } from "@/hooks/use-toast";
-import { agenticFlow, AgenticFlowInput, AgenticFlowOutput } from "@/ai/flows/agentic-flow";
+import { agenticFlow } from "@/ai/flows/agentic-flow";
+import useRecentProjects from "@/hooks/use-recent-projects";
 
 
 export interface Project {
@@ -48,6 +49,7 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const { toast } = useToast();
+  const { addRecentProject } = useRecentProjects();
 
   useEffect(() => {
     setHydrated(true);
@@ -60,7 +62,8 @@ export default function Home() {
       
       let currentHandle: FileSystemDirectoryHandle = root;
       for (const part of parts) {
-          currentHandle = await currentHandle.getDirectoryHandle(part, { create });
+        if (!part) continue;
+        currentHandle = await currentHandle.getDirectoryHandle(part, { create });
       }
       
       return await currentHandle.getFileHandle(fileName, { create });
@@ -83,7 +86,6 @@ export default function Home() {
 
     if (existingFile) {
         setActiveFile(path);
-        // If new content is provided, update it for the already open file.
         if (typeof content !== 'undefined' && existingFile.content !== content) {
             setOpenFiles(prev => prev.map(f => f.path === path ? { ...f, content } : f));
         }
@@ -139,22 +141,22 @@ export default function Home() {
         handle,
         tree
     });
+    addRecentProject(handle);
     setOpenFiles([]);
     setActiveFile(null);
     setIsProjectModalOpen(false);
-  }, []);
+  }, [addRecentProject]);
 
 
   const handleOpenFolder = useCallback(async () => {
     try {
       if ('showDirectoryPicker' in window) {
         const directoryHandle = await (window as any).showDirectoryPicker();
-        openProject(directoryHandle);
+        await openProject(directoryHandle);
       } else {
         alert('Your browser does not support the File System Access API.');
       }
     } catch (error: any) {
-        // Silently ignore AbortError which occurs when the user cancels the dialog
         if (error.name === 'AbortError') {
             return;
         }
@@ -193,7 +195,6 @@ export default function Home() {
 
     try {
         setIsExecuting(true);
-        // Step 1: Have AI update or create README.md
         const readmePrompt = `Analyze the project structure and create or update the README.md file. It should include a brief project description, setup instructions, and how to run the application. Files to read to get context: ${project.tree.filter(f => f.name === 'package.json' || f.name.includes('config')).map(f => f.path).join(', ')}`;
         
         const result = await agenticFlow({ prompt: readmePrompt });
@@ -218,13 +219,11 @@ export default function Home() {
             });
         }
 
-        // Step 2: Zip the project
         const zip = new JSZip();
         await addFilesToZip(zip, project.handle);
         
         const content = await zip.generateAsync({type:"blob"});
         
-        // Step 3: Trigger download
         const link = document.createElement('a');
         link.href = URL.createObjectURL(content);
         link.download = `${project.name}.zip`;
@@ -280,7 +279,6 @@ export default function Home() {
                   <TabsContent value="files" className="flex-1 overflow-y-auto">
                     <FileExplorer 
                       project={project} 
-                      onOpenFolder={handleOpenFolder} 
                       onOpenFile={handleOpenFile}
                     />
                   </TabsContent>

@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Folder, History, Plus, Briefcase } from "lucide-react";
+import { Folder, History, Plus, Briefcase, FolderOpen } from "lucide-react";
 import useRecentProjects from "@/hooks/use-recent-projects";
 import { ScrollArea } from "../ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +67,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
             dependencies: {
                  "react": "^18",
                  "react-dom": "^18",
-                 "next": "14.2.3"
+                 "next": "15.3.3"
             }
         }, null, 2));
         await writable.close();
@@ -101,10 +101,12 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
         const permission = await handle.queryPermission({ mode: 'readwrite' });
         if (permission === 'granted') {
             openProject(handle);
+            onOpenChange(false);
         } else {
             const request = await handle.requestPermission({ mode: 'readwrite' });
             if (request === 'granted') {
                 openProject(handle);
+                onOpenChange(false);
             } else {
                 toast({
                     variant: "destructive",
@@ -123,6 +125,20 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
     }
   }
 
+  const handleOpenFolder = async () => {
+    try {
+        const handle = await (window as any).showDirectoryPicker({mode: 'readwrite'});
+        openProject(handle);
+        addRecentProject(handle);
+        onOpenChange(false);
+    } catch (error: any) {
+        if (error.name !== 'AbortError') {
+            console.error("Error opening folder:", error);
+            toast({ variant: 'destructive', title: 'Error opening folder', description: error.message });
+        }
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -133,9 +149,10 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="recent" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="recent"><History className="mr-2" /> Recent Projects</TabsTrigger>
             <TabsTrigger value="new"><Plus className="mr-2" />New Project</TabsTrigger>
+            <TabsTrigger value="open"><Folder className="mr-2" /> Open Folder</TabsTrigger>
           </TabsList>
           <TabsContent value="recent" className="mt-4">
              <ScrollArea className="h-72">
@@ -166,7 +183,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
              </ScrollArea>
           </TabsContent>
           <TabsContent value="new" className="mt-4">
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 h-72">
                 <p className="text-sm text-muted-foreground">
                     This will create a new folder on your local machine. You will be prompted to select a parent directory to save it in.
                 </p>
@@ -186,6 +203,17 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
                     Create and Open Project
                 </Button>
              </DialogFooter>
+          </TabsContent>
+          <TabsContent value="open" className="mt-4">
+            <div className="flex flex-col items-center justify-center h-72 text-muted-foreground text-center p-8">
+                <Folder className="w-12 h-12 mb-4 text-primary" />
+                <h3 className="font-semibold">Open an Existing Folder</h3>
+                <p className="text-sm max-w-sm mx-auto">Select a folder on your computer to open it as a project in the IDE. Your files and folders will appear in the explorer.</p>
+                <Button onClick={handleOpenFolder} className="mt-4">
+                    <FolderOpen className="mr-2"/>
+                    Choose Folder
+                </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

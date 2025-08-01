@@ -39,7 +39,7 @@ export default function Header({
 
   return (
     <>
-      <header className="flex h-12 items-center justify-between px-4 shrink-0">
+      <header className="flex h-12 items-center justify-between px-4 shrink-0 border-b">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Bot className="w-6 h-6 text-primary" />
@@ -50,13 +50,13 @@ export default function Header({
                <Button variant="ghost">File</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={onOpenFolder}>
+              <DropdownMenuItem onClick={() => onProjectModalOpenChange(true)}>
                 <FileIcon className="mr-2" />
                 New Project...
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onOpenFolder}>
+              <DropdownMenuItem onClick={() => onProjectModalOpenChange(true)}>
                 <FolderOpen className="mr-2" />
-                Open Folder...
+                Open...
               </DropdownMenuItem>
               {project && (
                  <DropdownMenuItem onClick={onCloseProject}>

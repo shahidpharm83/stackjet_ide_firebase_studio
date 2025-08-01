@@ -57,13 +57,17 @@ export default function useRecentProjects() {
       setIsLoading(true);
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        const projectNames = stored ? JSON.parse(stored) : [];
+        const projectNames: string[] = stored ? JSON.parse(stored) : [];
         
         const projects: RecentProject[] = [];
         for (const name of projectNames) {
-          const handle = await idb.get(name);
-          if (handle) {
-            projects.push({ name, handle });
+          try {
+            const handle = await idb.get(name);
+            if (handle) {
+              projects.push({ name, handle });
+            }
+          } catch(e) {
+            console.warn(`Could not load recent project handle for "${name}":`, e);
           }
         }
         setRecentProjects(projects);
@@ -91,7 +95,9 @@ export default function useRecentProjects() {
       const projectNames = newProjects.map(p => p.name);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(projectNames));
       
-      idb.set(newProject.name, newProject.handle);
+      idb.set(newProject.name, newProject.handle).catch(error => {
+          console.error("Failed to save project handle to IndexedDB", error);
+      });
 
       return newProjects;
     });

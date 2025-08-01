@@ -1,13 +1,12 @@
 
 "use client"
 import React from 'react'
-import { Folder, FileText, ChevronRight, FolderOpen } from 'lucide-react';
+import { Folder, FileText, ChevronRight } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Project } from '@/app/page';
 
-// Define the structure for a file or folder in our tree
 export interface FileSystemTreeItem {
   name: string;
   kind: 'file' | 'directory';
@@ -16,7 +15,6 @@ export interface FileSystemTreeItem {
   children?: FileSystemTreeItem[];
 }
 
-// Function to recursively build the file tree from a directory handle
 export async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandle, path = ''): Promise<FileSystemTreeItem[]> {
     const tree: FileSystemTreeItem[] = [];
     for await (const handle of directoryHandle.values()) {
@@ -38,7 +36,6 @@ export async function getDirectoryTree(directoryHandle: FileSystemDirectoryHandl
             });
         }
     }
-    // Sort so folders appear before files
     return tree.sort((a, b) => {
         if (a.kind === 'directory' && b.kind === 'file') return -1;
         if (a.kind === 'file' && b.kind === 'directory') return 1;
@@ -73,7 +70,7 @@ const FileTreeItem = ({ item, level = 0, onOpenFile }: FileTreeItemProps) => {
                   <span className="truncate">{item.name}</span>
               </div>
             </CollapsibleTrigger>
-            <CollapsibleContent key={item.path}>
+            <CollapsibleContent>
               {item.children?.map((child) => (
                   <FileTreeItem key={child.path} item={child} level={level + 1} onOpenFile={onOpenFile}/>
               ))}
@@ -97,11 +94,16 @@ const FileTreeItem = ({ item, level = 0, onOpenFile }: FileTreeItemProps) => {
 
 type FileExplorerProps = {
   project: Project | null;
-  onOpenFolder: () => void;
   onOpenFile: (path: string, handle: FileSystemFileHandle) => void;
 };
 
-export default function FileExplorer({ project, onOpenFolder, onOpenFile }: FileExplorerProps) {
+export default function FileExplorer({ project, onOpenFile }: FileExplorerProps) {
+  const handleOpenFolderClick = () => {
+    // This function is a placeholder. The actual logic is now in the project modal.
+    // We can trigger the modal from here if needed, but for now, it's in the header.
+    console.log("Open folder clicked from explorer, but is handled by modal.");
+  };
+
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
       <div className="p-2 flex justify-between items-center border-b border-border">
@@ -113,8 +115,7 @@ export default function FileExplorer({ project, onOpenFolder, onOpenFile }: File
         ) : (
             <div className="p-4 text-center text-muted-foreground text-sm">
                 <p>No folder opened.</p>
-                <Button variant="link" size="sm" onClick={onOpenFolder}>Open a local folder</Button> 
-                <p className="text-xs mt-2">to start editing.</p>
+                <p className="text-xs mt-2">Use the File menu to create or open a project.</p>
             </div>
         )}
       </ScrollArea>
