@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Pie, PieChart, Cell } from "recharts"
+import { Bar, BarChart, XAxis, YAxis } from "recharts"
 
 import {
   Card,
@@ -16,8 +16,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent
 } from "@/components/ui/chart"
 import type { AgenticFlowOutput } from "@/ai/flows/agentic-flow"
 
@@ -32,11 +30,10 @@ const chartConfig = {
   rename: { label: "Renames", color: "hsl(var(--chart-4))" },
   move: { label: "Moves", color: "hsl(var(--chart-5))" },
   command: { label: "Commands", color: "hsl(var(--muted))" },
+  value: { label: "Count" }
 } satisfies ChartConfig
 
 export default function OperationSummaryChart({ plan }: OperationSummaryChartProps) {
-    const [activeKey, setActiveKey] = React.useState<string | null>(null);
-
     const data = React.useMemo(() => {
         const counts = plan.reduce((acc, step) => {
             const action = 'action' in step ? step.action : 'command';
@@ -45,68 +42,39 @@ export default function OperationSummaryChart({ plan }: OperationSummaryChartPro
         }, {} as Record<string, number>);
 
         return Object.entries(counts).map(([key, value]) => ({
-            name: key,
+            name: (chartConfig as any)[key]?.label || key,
             value: value,
-            fill: (chartConfig as any)[key]?.color || "hsl(var(--muted-foreground))"
+            fill: `var(--color-${key})`
         }));
     }, [plan]);
 
-  const activeIndex = React.useMemo(
-    () => data.findIndex((item) => item.name === activeKey),
-    [activeKey, data]
-  );
-
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="items-center pb-0">
+      <CardHeader>
         <CardTitle>Operations Breakdown</CardTitle>
         <CardDescription>A summary of actions taken.</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
-        <ChartContainer
-          config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
-        >
-          <PieChart>
+        <ChartContainer config={chartConfig} className="h-[200px] w-full">
+          <BarChart accessibilityLayer data={data}>
+             <XAxis
+              dataKey="name"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 3)}
+            />
+            <YAxis />
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={<ChartTooltipContent indicator="line" />}
             />
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={60}
-              strokeWidth={5}
-              activeIndex={activeIndex}
-              activeShape={({ outerRadius = 0, ...props }) => (
-                <g>
-                  <g>
-                    <g>
-                       <g transform={props.transform}>
-                        <path d={props.d} fill={props.fill} />
-                       </g>
-                    </g>
-                  </g>
-                  <g>
-                    <g>
-                       <g transform={props.transform}>
-                        <path d={props.d} stroke={props.fill} strokeWidth={2} />
-                       </g>
-                    </g>
-                  </g>
-                </g>
-              )}
-            >
-             {data.map((entry) => (
-                <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-            ))}
-            </Pie>
-            <ChartLegend
-              content={<ChartLegendContent nameKey="name" />}
-              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-            />
-          </PieChart>
+            <Bar dataKey="value" radius={4}>
+                {data.map((entry) => (
+                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                ))}
+            </Bar>
+          </BarChart>
         </ChartContainer>
       </CardContent>
     </Card>
