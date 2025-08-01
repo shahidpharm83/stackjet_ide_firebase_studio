@@ -284,7 +284,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     setAgentState("idle");
     // Final refresh after all operations are done
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, typeContent]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];

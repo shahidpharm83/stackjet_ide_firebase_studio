@@ -41,22 +41,23 @@ type KeyTestState = {
 };
 
 export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const savedKeys = localStorage.getItem("geminiApiKeys");
-      return savedKeys ? JSON.parse(savedKeys) : [];
-    } catch (error) {
-      console.error("Failed to load API keys from localStorage on init", error);
-      return [];
-    }
-  });
-
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
   const [keyTestStates, setKeyTestStates] = useState<KeyTestState>({});
   const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+      const savedKeys = localStorage.getItem("geminiApiKeys");
+      if (savedKeys) {
+        setApiKeys(JSON.parse(savedKeys));
+      }
+    } catch (error) {
+      console.error("Failed to load API keys from localStorage on init", error);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
