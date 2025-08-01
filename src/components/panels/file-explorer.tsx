@@ -1,8 +1,11 @@
-import { Folder, FileText, ChevronDown, Plus, UploadCloud } from 'lucide-react';
+"use client"
+import React from 'react'
+import { Folder, FileText, ChevronDown, Plus, UploadCloud, ChevronRight } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-const fileTree = [
+const initialFileTree = [
   {
     name: 'src',
     type: 'folder',
@@ -16,7 +19,11 @@ const fileTree = [
         name: 'components',
         type: 'folder',
         children: [
-            { name: 'ui', type: 'folder', children: [{ name: 'button.tsx', type: 'file' }] },
+            { 
+              name: 'ui', 
+              type: 'folder', 
+              children: [{ name: 'button.tsx', type: 'file' }] 
+            },
             { name: 'header.tsx', type: 'file' },
         ],
       },
@@ -34,16 +41,20 @@ const FileTreeItem = ({ item, level = 0 }: { item: any; level?: number }) => {
 
     if (isFolder) {
         return (
-            <div>
-                <div className="flex items-center py-1.5 px-3 rounded-md cursor-pointer hover:bg-muted" style={{ paddingLeft }}>
-                    <ChevronDown className="w-4 h-4 mr-1 flex-shrink-0" />
-                    <Icon className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                    <span className="truncate">{item.name}</span>
-                </div>
-                {item.children.map((child: any) => (
-                    <FileTreeItem key={child.name} item={child} level={level + 1} />
-                ))}
-            </div>
+          <Collapsible>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center py-1.5 px-3 rounded-md cursor-pointer hover:bg-muted" style={{ paddingLeft }}>
+                  <ChevronRight className="w-4 h-4 mr-1 flex-shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+                  <Icon className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                  <span className="truncate">{item.name}</span>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              {item.children.map((child: any) => (
+                  <FileTreeItem key={child.name} item={child} level={level + 1} />
+              ))}
+            </CollapsibleContent>
+          </Collapsible>
         );
     }
     
@@ -58,8 +69,20 @@ const FileTreeItem = ({ item, level = 0 }: { item: any; level?: number }) => {
 
 
 export default function FileExplorer() {
+  const [fileTree, setFileTree] = React.useState(initialFileTree);
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
+      <div className="p-2 flex justify-between items-center border-b border-border">
+          <span className="text-sm font-semibold">File Explorer</span>
+          <div>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Plus className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7">
+              <UploadCloud className="w-4 h-4" />
+            </Button>
+          </div>
+      </div>
       <ScrollArea className="flex-1 p-2">
         {fileTree.map(item => <FileTreeItem key={item.name} item={item} />)}
       </ScrollArea>

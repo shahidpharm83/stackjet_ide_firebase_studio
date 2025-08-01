@@ -27,13 +27,16 @@ export default HelloWorld;
 // A simple syntax highlighter for demonstration
 function SyntaxHighlighter({ code }: { code: string }) {
   const highlight = (line: string) => {
-    // All of these replacements are on a line that's been HTML-escaped
-    const highlightedLine = line
+    // Basic HTML entity escaping
+    const escapedLine = line
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
+      .replace(/'/g, '&#039;');
+
+    // All of these replacements are on a line that's been HTML-escaped
+    const highlightedLine = escapedLine
       .replace(
         /\b(import|from|function|const|if|return|export|default)\b/g,
         '<span class="text-fuchsia-400">$&</span>'

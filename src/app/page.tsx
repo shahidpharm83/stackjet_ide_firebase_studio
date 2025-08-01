@@ -17,7 +17,7 @@ export default function Home() {
         <SidebarProvider>
           <div className="flex flex-1">
             <LeftActivityBar />
-            <Sidebar side="left" className="w-96 border-r border-border" collapsible="offcanvas" defaultOpen={true}>
+            <Sidebar side="left" className="w-96 border-r border-border" collapsible="icon" defaultOpen={true}>
               <Tabs defaultValue="files" className="h-full flex flex-col">
                 <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b">
                   <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
