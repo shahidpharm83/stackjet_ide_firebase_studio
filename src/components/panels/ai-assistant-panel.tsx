@@ -843,10 +843,10 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 </Alert>
                 
                 <div className="flex flex-col md:flex-row gap-4">
-                    <div className="w-full md:w-1/2">
+                    <div className="flex-1 min-w-0">
                         <OperationSummaryChart plan={executedPlan} />
                     </div>
-                    <div className="w-full md:w-1/2 space-y-2">
+                    <div className="flex-1 min-w-0 space-y-2">
                         <h4 className="font-semibold text-sm">Next Steps</h4>
                         <div className="flex flex-wrap gap-2">
                             {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
@@ -869,7 +869,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     if (typeof message.content === 'string') {
         return (
           <div className="flex flex-col items-end">
-              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg">
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded-lg max-w-[90%]">
                  {message.uploadedFile && message.uploadedFile.type.startsWith('image/') && (
                      <img 
                         src={message.uploadedFile.dataUri} 
@@ -1006,5 +1006,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    
