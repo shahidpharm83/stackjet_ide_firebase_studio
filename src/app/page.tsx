@@ -53,40 +53,40 @@ export default function Home() {
       <Header project={project} onCloseProject={handleCloseProject} />
       <div className="flex flex-1 overflow-hidden">
         <SidebarProvider>
-          <div className="flex flex-1">
-            <LeftActivityBar />
-            <Sidebar side="left" className="w-96 border-r border-border" collapsible="icon" defaultOpen={true}>
-              <Tabs defaultValue="files" className="h-full flex flex-col">
-                <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b">
-                  <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
-                    <File className="w-4 h-4 mr-2" />
-                    Files
-                  </TabsTrigger>
-                  <TabsTrigger value="ai" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
-                     <Bot className="w-4 h-4 mr-2" />
-                    AI Assistant
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="files" className="flex-1 overflow-y-auto">
-                  <FileExplorer 
-                    project={project} 
-                    onOpenFolder={handleOpenFolder} 
-                  />
-                </TabsContent>
-                <TabsContent value="ai" className="flex-1">
-                  <AiAssistantPanel />
-                </TabsContent>
-              </Tabs>
-            </Sidebar>
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <MainPanel projectOpen={!!project} />
-              {isTerminalOpen && <TerminalPanel projectOpen={!!project} />}
-            </div>
-            <Sidebar side="right" className="flex-1 border-l border-border" collapsible="offcanvas" defaultOpen={false}>
-              <PreviewPanel projectOpen={!!project} />
-            </Sidebar>
-            <RightActivityBar />
-          </div>
+          <LeftActivityBar />
+          <Sidebar side="left" className="w-96 border-r border-border" collapsible="icon" defaultOpen={true}>
+            <Tabs defaultValue="files" className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b">
+                <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
+                  <File className="w-4 h-4 mr-2" />
+                  Files
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
+                    <Bot className="w-4 h-4 mr-2" />
+                  AI Assistant
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="files" className="flex-1 overflow-y-auto">
+                <FileExplorer 
+                  project={project} 
+                  onOpenFolder={handleOpenFolder} 
+                />
+              </TabsContent>
+              <TabsContent value="ai" className="flex-1">
+                <AiAssistantPanel />
+              </TabsContent>
+            </Tabs>
+          </Sidebar>
+        </SidebarProvider>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <MainPanel projectOpen={!!project} />
+          {isTerminalOpen && <TerminalPanel projectOpen={!!project} />}
+        </div>
+        <SidebarProvider>
+          <Sidebar side="right" className="flex-1 border-l border-border" collapsible="offcanvas" defaultOpen={false}>
+            <PreviewPanel projectOpen={!!project} />
+          </Sidebar>
+          <RightActivityBar />
         </SidebarProvider>
       </div>
       <StatusBar onTerminalToggle={() => setIsTerminalOpen(!isTerminalOpen)} />
