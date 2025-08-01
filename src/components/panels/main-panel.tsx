@@ -37,7 +37,12 @@ export default function MainPanel({
 }: MainPanelProps) {
   
   const [terminalPanelSize, setTerminalPanelSize] = useState(20);
+  const [isClient, setIsClient] = useState(false);
   const noFilesOpen = openFiles.length === 0;
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleTabChange = (value: string) => {
     if (value === 'terminal') {
@@ -58,7 +63,7 @@ export default function MainPanel({
          setTerminalPanelSize(20); // Collapse it back
       }
     }
-  }, [activeMainView]);
+  }, [activeMainView, terminalPanelSize]);
   
 
   const activeValue = activeMainView === 'terminal' && !activeFile ? 'terminal' : activeFile || "";
@@ -69,6 +74,15 @@ export default function MainPanel({
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
         <Code className="w-16 h-16 mb-4" />
         <p>Open a project to start working.</p>
+      </div>
+    );
+  }
+
+  if (!isClient) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
+        <Code className="w-16 h-16 mb-4" />
+        <p>Loading editor...</p>
       </div>
     );
   }
