@@ -20,6 +20,8 @@ type PlanStep = AgenticFlowOutput['plan'][0];
 type ExecutedStep = PlanStep & {
     startTime: number;
     endTime: number;
+    status: 'success' | 'error';
+    outcome: string;
 };
 
 type Timings = {
@@ -45,6 +47,7 @@ type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error";
 
 type AiAssistantPanelProps = {
   project: Project | null;
+  refreshFileTree: () => void;
 };
 
 type ApiKey = {
@@ -53,10 +56,10 @@ type ApiKey = {
   key: string;
 };
 
-const CommandOutput = ({ command, outcome }: { command: string; outcome: string }) => (
+const CommandOutput = ({ command, outcome, status }: { command: string; outcome: string, status: 'success' | 'error' }) => (
   <div className="bg-black/80 rounded-md p-3 font-code text-xs mt-2">
     <div className="flex items-center gap-2">
-      <span className="text-green-400">$</span>
+      <span className={status === 'success' ? 'text-green-400' : 'text-red-400'}>$</span>
       <span className="text-white">{command}</span>
     </div>
     <div className="text-gray-400 whitespace-pre-wrap">{outcome}</div>
@@ -64,7 +67,7 @@ const CommandOutput = ({ command, outcome }: { command: string; outcome: string 
 );
 
 
-export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
+export default function AiAssistantPanel({ project, refreshFileTree }: AiAssistantPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [agentState, setAgentState] = useState<AgentState>("idle");
@@ -120,8 +123,30 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }
   }, [messages, agentState]);
   
-  const startExecution = useCallback((messageIndex: number, plan: PlanStep[]) => {
-    if (!plan || plan.length === 0) return;
+  // Helper to get a directory handle, creating it if it doesn't exist
+  const getDirectoryHandle = async (root: FileSystemDirectoryHandle, path: string, create = false) => {
+    let currentHandle = root;
+    const parts = path.split('/').filter(p => p);
+    for (const part of parts) {
+      currentHandle = await currentHandle.getDirectoryHandle(part, { create });
+    }
+    return currentHandle;
+  };
+  
+  // Helper to get a file handle, creating directories if needed
+  const getFileHandle = async (root: FileSystemDirectoryHandle, path: string, create = false) => {
+      const parts = path.split('/');
+      const fileName = parts.pop();
+      if (!fileName) throw new Error('Invalid file path');
+      
+      const dirPath = parts.join('/');
+      const dirHandle = await getDirectoryHandle(root, dirPath, create);
+      
+      return await dirHandle.getFileHandle(fileName, { create });
+  };
+  
+  const startExecution = useCallback(async (messageIndex: number, plan: PlanStep[]) => {
+    if (!plan || plan.length === 0 || !project) return;
 
     setAgentState("executing");
     setMessages(prev => prev.map((msg, idx) => 
@@ -133,60 +158,99 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         } : msg
     ));
 
-    const totalSteps = plan.length;
-    let stepIndex = 0;
-    const interval = setInterval(() => {
-        if (stepIndex >= totalSteps) {
-            clearInterval(interval);
-            setAgentState("summarizing");
-
-            // Final update to mark execution and summary as complete
-            setMessages(prev => prev.map((msg, idx) => {
-                if (idx === messageIndex) {
-                    const executionEndTime = Date.now();
-                    return { 
-                        ...msg, 
-                        isExecuting: false,
-                        summaryComplete: true, // Explicitly mark summary as ready
-                        timings: { 
-                            ...(msg.timings || { start: Date.now() }), 
-                            executionEnd: executionEndTime,
-                            summaryEnd: Date.now() 
-                        } 
-                    };
-                }
-                return msg;
-            }));
-
-            // Set agent back to idle after summary is shown
-            setTimeout(() => {
-                setAgentState("idle");
-            }, 500);
-            return;
-        }
-        
-        const nextStep = plan[stepIndex];
+    for (const step of plan) {
         const stepStartTime = Date.now();
-        
-        // Simulate step execution time
-        const stepExecutionTime = 500 + Math.random() * 500;
+        let stepResult: { status: 'success' | 'error'; outcome: string };
 
-        setTimeout(() => {
-             setMessages(prev => prev.map((msg, idx) => {
-                if (idx === messageIndex) {
-                    const newExecutedPlan = [
-                        ...(msg.executedPlan || []), 
-                        {...nextStep, startTime: stepStartTime, endTime: Date.now() }
-                    ];
-                    return { ...msg, executedPlan: newExecutedPlan };
+        try {
+            if ('action' in step) { // It's a file operation
+                const { action, fileName, content } = step;
+                switch (action) {
+                    case 'write':
+                    case 'edit':
+                        const fileHandle = await getFileHandle(project.handle, fileName, true);
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(content || '');
+                        await writable.close();
+                        stepResult = { status: 'success', outcome: `Wrote ${content?.length || 0} bytes to ${fileName}` };
+                        break;
+                    case 'delete':
+                        const parts = fileName.split('/');
+                        const name = parts.pop()!;
+                        const dirPath = parts.join('/');
+                        const dirHandle = await getDirectoryHandle(project.handle, dirPath, false);
+                        await dirHandle.removeEntry(name, { recursive: true });
+                        stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
+                        break;
+                    case 'rename':
+                        // Note: This assumes new name is provided in `content`. A better schema would have a `newName` field.
+                        const oldPath = fileName;
+                        const newPath = step.content || '';
+                        if (!newPath) throw new Error("New name not provided for rename operation.");
+                        const oldFileHandle = await getFileHandle(project.handle, oldPath, false);
+                        // The native `move` is on the handle itself in latest specs, but not widely supported.
+                        // We will simulate by copy and delete.
+                        const fileData = await oldFileHandle.getFile();
+                        const newFileHandle = await getFileHandle(project.handle, newPath, true);
+                        const writableNew = await newFileHandle.createWritable();
+                        await writableNew.write(await fileData.text());
+                        await writableNew.close();
+                        // now delete old
+                        const oldParts = oldPath.split('/');
+                        const oldName = oldParts.pop()!;
+                        const oldDirHandle = await getDirectoryHandle(project.handle, oldParts.join('/'), false);
+                        await oldDirHandle.removeEntry(oldName);
+                        stepResult = { status: 'success', outcome: `Renamed ${oldPath} to ${newPath}` };
+                        break;
+                    default:
+                        stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
                 }
-                return msg;
-            }));
-        }, stepExecutionTime)
-        
-        stepIndex++;
-    }, 800);
-  }, []);
+            } else { // It's a command operation
+                stepResult = { status: 'success', outcome: `(Emulated) ${step.expectedOutcome}` };
+            }
+        } catch (error: any) {
+            console.error(`Execution failed for step:`, step, error);
+            stepResult = { status: 'error', outcome: error.message };
+        }
+
+        const executedStep: ExecutedStep = {
+            ...step,
+            startTime: stepStartTime,
+            endTime: Date.now(),
+            ...stepResult,
+        };
+
+        setMessages(prev => prev.map((msg, idx) => {
+            if (idx === messageIndex) {
+                return { ...msg, executedPlan: [...(msg.executedPlan || []), executedStep] };
+            }
+            return msg;
+        }));
+         // Small delay between steps
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    // Final update after loop
+    setMessages(prev => prev.map((msg, idx) => {
+        if (idx === messageIndex) {
+            const executionEndTime = Date.now();
+            return {
+                ...msg,
+                isExecuting: false,
+                summaryComplete: true, // This triggers the summary
+                timings: {
+                    ...(msg.timings || { start: Date.now() }),
+                    executionEnd: executionEndTime,
+                    summaryEnd: Date.now()
+                }
+            };
+        }
+        return msg;
+    }));
+    
+    setAgentState("idle");
+    refreshFileTree(); // Refresh the file explorer view
+  }, [project, refreshFileTree]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
@@ -223,6 +287,11 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
 
   const sendPrompt = useCallback(async (promptText: string) => {
     if (!promptText.trim() || agentState !== 'idle') return;
+    
+    if (!project) {
+        setInput("Please open a folder first to provide a context for your project.");
+        return;
+    }
     
     const startTime = Date.now();
 
@@ -284,7 +353,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, startExecution]);
+  }, [agentState, agenticFlowWithRetry, startExecution, project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -403,17 +472,24 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                         {executedPlan.map((step, idx) => {
                           const action = 'action' in step ? step.action : 'command';
                           const stepTime = step.endTime - step.startTime;
+                          const isSuccess = step.status === 'success';
                           return (
-                            <div key={idx} className={`p-3 rounded-md text-sm transition-all duration-300 bg-green-500/10 border-l-4 border-green-500`}>
+                            <div key={idx} className={`p-3 rounded-md text-sm transition-all duration-300 ${isSuccess ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'} border-l-4`}>
                               <div className="flex items-center gap-3">
-                                <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                {isSuccess ? (
+                                    <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                 ) : (
+                                    <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                                 )}
                                 {renderStepIcon(action)}
                                 <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
                                 <span className="text-xs text-muted-foreground">{formatTime(stepTime)}</span>
                                 <Badge variant="outline" className="text-xs capitalize">{action}</Badge>
                               </div>
-                              { 'command' in step && (
-                                <CommandOutput command={step.command} outcome={step.expectedOutcome} />
+                              { 'command' in step ? (
+                                <CommandOutput command={step.command} outcome={step.outcome} status={step.status} />
+                              ) : (
+                                <p className="text-xs text-muted-foreground pl-7 mt-1">{step.outcome}</p>
                               )}
                             </div>
                           )
@@ -446,8 +522,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                     <AlertDescription>
                         {response.summary}
                          <div className="flex items-center gap-4 mt-2 text-xs">
-                           <span><strong className="text-foreground">{executedPlan.length}</strong> successful steps</span>
-                           <span><strong className="text-foreground">0</strong> errors</span>
+                           <span><strong className="text-foreground">{executedPlan.filter(s => s.status === 'success').length}</strong> successful steps</span>
+                           <span><strong className="text-foreground">{executedPlan.filter(s => s.status === 'error').length}</strong> errors</span>
                            {timings?.executionEnd && timings.executionStart && (
                              <span>Execution Time: <strong className="text-foreground">{formatTime(timings.executionEnd - timings.executionStart)}</strong></span>
                            )}

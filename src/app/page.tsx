@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useCallback } from "react";
@@ -31,6 +32,13 @@ export default function Home() {
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [rightPanelVisible, setRightPanelVisible] = useState(false);
 
+
+  const refreshFileTree = useCallback(async () => {
+    if (project) {
+        const tree = await getDirectoryTree(project.handle);
+        setProject(p => p ? { ...p, tree } : null);
+    }
+  }, [project]);
 
   const handleOpenFolder = useCallback(async () => {
     try {
@@ -87,7 +95,7 @@ export default function Home() {
                     />
                   </TabsContent>
                   <TabsContent value="ai" className="flex-1 overflow-hidden">
-                    <AiAssistantPanel project={project} />
+                    <AiAssistantPanel project={project} refreshFileTree={refreshFileTree} />
                   </TabsContent>
                 </Tabs>
               </Panel>
