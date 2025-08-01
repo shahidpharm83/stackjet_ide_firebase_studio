@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { useTerminal } from '@/contexts/terminal-context';
 
 type TerminalPanelProps = {
   projectOpen: boolean;
@@ -12,7 +13,18 @@ type TerminalPanelProps = {
 
 export default function TerminalPanel({ projectOpen }: TerminalPanelProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
+  const { setWebSocket } = useTerminal();
+
   const termInstance = useRef<{ term: Terminal, fitAddon: FitAddon, ws: WebSocket } | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (termInstance.current) {
+        termInstance.current.ws.close();
+        termInstance.current.term.dispose();
+        termInstance.current = null;
+        setWebSocket(null);
+    }
+  }, [setWebSocket]);
 
   useEffect(() => {
     if (projectOpen && terminalRef.current && !termInstance.current) {
@@ -32,10 +44,11 @@ export default function TerminalPanel({ projectOpen }: TerminalPanelProps) {
       
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHost = window.location.hostname;
-      const wsPort = 3001;
+      const wsPort = 3001; 
       const wsUrl = `${wsProtocol}//${wsHost}:${wsPort}`;
 
       const ws = new WebSocket(wsUrl);
+      setWebSocket(ws);
 
       ws.onopen = () => {
         console.log('Terminal WebSocket connection established');
@@ -63,27 +76,23 @@ export default function TerminalPanel({ projectOpen }: TerminalPanelProps) {
       });
       
       termInstance.current = { term, fitAddon, ws };
-    }
 
-    const resizeObserver = new ResizeObserver(() => {
-      termInstance.current?.fitAddon.fit();
-    });
+      const resizeObserver = new ResizeObserver(() => {
+        termInstance.current?.fitAddon.fit();
+      });
 
-    if (terminalRef.current) {
-      resizeObserver.observe(terminalRef.current);
-    }
-    
-    return () => {
       if (terminalRef.current) {
-        resizeObserver.unobserve(terminalRef.current);
+        resizeObserver.observe(terminalRef.current);
       }
-      if (termInstance.current) {
-        termInstance.current.ws.close();
-        termInstance.current.term.dispose();
-        termInstance.current = null;
-      }
-    };
-  }, [projectOpen]);
+      
+      return () => {
+         if (terminalRef.current) {
+            resizeObserver.unobserve(terminalRef.current);
+         }
+         cleanup();
+      };
+    }
+  }, [projectOpen, setWebSocket, cleanup]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#1e1e1e]">

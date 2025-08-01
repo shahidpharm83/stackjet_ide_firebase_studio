@@ -10,17 +10,15 @@ import PreviewPanel from "@/components/panels/preview-panel";
 import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
-import { File, Bot, Loader } from "lucide-react";
 import {
   PanelGroup,
   Panel,
   PanelResizeHandle,
 } from "react-resizable-panels";
-import JSZip from 'jszip';
 import { useToast } from "@/hooks/use-toast";
 import { agenticFlow } from "@/ai/flows/agentic-flow";
 import useRecentProjects from "@/hooks/use-recent-projects";
-
+import { TerminalProvider } from "@/contexts/terminal-context";
 
 export interface Project {
   name: string;
@@ -43,7 +41,7 @@ export default function Home() {
   const [project, setProject] = useState<Project | null>(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [activeLeftPanel, setActiveLeftPanel] = useState<LeftPanel>("files");
-  const [rightPanelVisible, setRightPanelVisible] = useState(false);
+  const [rightPanelVisible, setRightPanelVisible] = useState(true); // Default to true to show preview
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -121,23 +119,16 @@ export default function Home() {
         if (activeFile === path) {
             const newActivePath = remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1].path : null;
             setActiveFile(newActivePath);
-            if (newActivePath === null && activeMainView === 'editor') {
-                // If no files are left, but we were in editor view, decide what to do.
-                // Maybe switch to terminal or show a placeholder. For now, just clear active file.
-            }
         }
         return remainingFiles;
     });
   };
   
-  const handleActiveFileChange = (path: string) => {
-    setActiveFile(path);
-    setActiveMainView('editor');
-  };
-
   const handleViewChange = (view: string) => {
     if (view === 'terminal') {
       setActiveMainView('terminal');
+      // When switching to terminal tab, we might want to clear the active file
+      // but preserve the editor view. Let's keep active file for now.
     } else {
       setActiveFile(view);
       setActiveMainView('editor');
@@ -165,27 +156,6 @@ export default function Home() {
     setIsProjectModalOpen(false);
   }, [addRecentProject]);
 
-
-  const handleOpenFolder = useCallback(async () => {
-    try {
-      if ('showDirectoryPicker' in window) {
-        const directoryHandle = await (window as any).showDirectoryPicker();
-        await openProject(directoryHandle);
-      } else {
-        alert('Your browser does not support the File System Access API.');
-      }
-    } catch (error: any) {
-        if (error.name === 'AbortError') {
-            return;
-        }
-      if (error.name === 'SecurityError') {
-        alert('Opening a local folder is not allowed in this environment for security reasons. Please try running the app outside of an iframe.');
-      } else {
-        console.error('Error opening directory:', error);
-      }
-    }
-  }, [openProject]);
-
   const handleCloseProject = () => {
     setProject(null);
     setOpenFiles([]);
@@ -194,50 +164,28 @@ export default function Home() {
 
   const addFilesToZip = async (zip: JSZip, dirHandle: FileSystemDirectoryHandle, path: string = '') => {
     for await (const [name, handle] of dirHandle.entries()) {
-      const newPath = path ? `${path}/${name}` : name;
-      if (handle.kind === 'file') {
-        const file = await handle.getFile();
-        zip.file(newPath, file);
-      } else if (handle.kind === 'directory') {
-        await addFilesToZip(zip, handle, newPath);
-      }
+        // Exclude node_modules and .next directories
+        if (name === 'node_modules' || name === '.next') continue;
+
+        const newPath = path ? `${path}/${name}` : name;
+        if (handle.kind === 'file') {
+            const file = await handle.getFile();
+            zip.file(newPath, file);
+        } else if (handle.kind === 'directory') {
+            await addFilesToZip(zip, handle, newPath);
+        }
     }
-  };
+};
 
   const handleDownloadProject = async () => {
     if (!project) return;
-    toast({
+     toast({
       title: "Preparing Project Download",
-      description: "First, the AI is updating your README...",
+      description: "Zipping project files...",
     });
 
     try {
-        setIsExecuting(true);
-        const readmePrompt = `Analyze the project structure and create or update the README.md file. It should include a brief project description, setup instructions, and how to run the application. Files to read to get context: ${project.tree.filter(f => f.name === 'package.json' || f.name.includes('config')).map(f => f.path).join(', ')}`;
-        
-        const result = await agenticFlow({ prompt: readmePrompt });
-
-        const readmeStep = result.plan.find(step => 'fileName' in step && step.fileName === 'README.md');
-
-        if (readmeStep && 'fileName' in readmeStep && readmeStep.content) {
-            const handle = await getFileHandle(project.handle, 'README.md', true);
-            const writable = await handle.createWritable();
-            await writable.write(readmeStep.content);
-            await writable.close();
-            await refreshFileTree();
-            toast({
-              title: "README Updated",
-              description: "Now zipping the project files.",
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "README Generation Failed",
-                description: "The AI could not generate a README.md file. Proceeding with zipping.",
-            });
-        }
-
-        const zip = new JSZip();
+        const zip = new (await import('jszip')).default();
         await addFilesToZip(zip, project.handle);
         
         const content = await zip.generateAsync({type:"blob"});
@@ -260,8 +208,6 @@ export default function Home() {
             title: "Download Failed",
             description: error.message,
         });
-    } finally {
-        setIsExecuting(false);
     }
   };
 
@@ -270,71 +216,73 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
-      <Header 
-        project={project} 
-        onCloseProject={handleCloseProject} 
-        onOpenFolder={() => setIsProjectModalOpen(true)}
-        onDownloadProject={handleDownloadProject}
-        isDownloading={isExecuting}
-        isProjectModalOpen={isProjectModalOpen}
-        onProjectModalOpenChange={setIsProjectModalOpen}
-        openProject={openProject}
-      />
-      <div className="flex flex-1 overflow-hidden">
-        <LeftActivityBar 
-            onToggle={() => setLeftPanelVisible(!leftPanelVisible)} 
-            activePanel={activeLeftPanel}
-            setActivePanel={setActiveLeftPanel}
+    <TerminalProvider>
+      <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
+        <Header 
+          project={project} 
+          onCloseProject={handleCloseProject} 
+          onOpenFolder={() => setIsProjectModalOpen(true)}
+          onDownloadProject={handleDownloadProject}
+          isDownloading={isExecuting}
+          isProjectModalOpen={isProjectModalOpen}
+          onProjectModalOpenChange={setIsProjectModalOpen}
+          openProject={openProject}
         />
-        <PanelGroup direction="horizontal" className="flex-1">
-          {leftPanelVisible && (
-            <>
-              <Panel defaultSize={20} minSize={15} className="flex flex-col">
-                {activeLeftPanel === 'files' && (
-                    <FileExplorer 
-                      project={project} 
-                      onOpenFile={handleOpenFile}
-                    />
-                )}
-                {activeLeftPanel === 'ai' && (
-                    <AiAssistantPanel 
+        <div className="flex flex-1 overflow-hidden">
+          <LeftActivityBar 
+              onToggle={() => setLeftPanelVisible(!leftPanelVisible)} 
+              activePanel={activeLeftPanel}
+              setActivePanel={setActiveLeftPanel}
+          />
+          <PanelGroup direction="horizontal" className="flex-1">
+            {leftPanelVisible && (
+              <>
+                <Panel defaultSize={20} minSize={15} className="flex flex-col">
+                  {activeLeftPanel === 'files' && (
+                      <FileExplorer 
                         project={project} 
-                        refreshFileTree={refreshFileTree} 
                         onOpenFile={handleOpenFile}
-                        onFileContentChange={handleFileContentChange}
-                        getOpenFile={getOpenFile}
-                        setActiveMainView={setActiveMainView}
-                    />
-                )}
-              </Panel>
-              <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
-            </>
-          )}
-          <Panel>
-             <MainPanel 
-                  openFiles={openFiles} 
-                  activeFile={activeFile}
-                  onCloseFile={handleCloseFile}
-                  onViewChange={handleViewChange}
-                  onFileContentChange={handleFileContentChange}
-                  isExecuting={isExecuting}
-                  projectOpen={!!project}
-                  activeMainView={activeMainView}
-                />
-          </Panel>
-          {rightPanelVisible && (
-            <>
-              <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
-              <Panel defaultSize={30} minSize={15}>
-                  <PreviewPanel projectOpen={!!project} />
-              </Panel>
-            </>
-          )}
-        </PanelGroup>
-        <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
+                      />
+                  )}
+                  {activeLeftPanel === 'ai' && (
+                      <AiAssistantPanel 
+                          project={project} 
+                          refreshFileTree={refreshFileTree} 
+                          onOpenFile={handleOpenFile}
+                          onFileContentChange={handleFileContentChange}
+                          getOpenFile={getOpenFile}
+                          setActiveMainView={setActiveMainView}
+                      />
+                  )}
+                </Panel>
+                <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
+              </>
+            )}
+            <Panel>
+              <MainPanel 
+                    openFiles={openFiles} 
+                    activeFile={activeFile}
+                    onCloseFile={handleCloseFile}
+                    onViewChange={handleViewChange}
+                    onFileContentChange={handleFileContentChange}
+                    isExecuting={isExecuting}
+                    projectOpen={!!project}
+                    activeMainView={activeMainView}
+                  />
+            </Panel>
+            {rightPanelVisible && (
+              <>
+                <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
+                <Panel defaultSize={40} minSize={25}>
+                    <PreviewPanel projectOpen={!!project} />
+                </Panel>
+              </>
+            )}
+          </PanelGroup>
+          <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
+        </div>
+        <StatusBar onToggleTerminal={() => handleViewChange(activeMainView === 'terminal' ? 'editor' : 'terminal')} />
       </div>
-       <StatusBar onToggleTerminal={() => setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal')} />
-    </div>
+    </TerminalProvider>
   );
 }

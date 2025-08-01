@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState }from "react";
 import dynamic from "next/dynamic";
 import { Play, Settings, Bot, X, FolderOpen, Download, CircleDashed, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useTerminal } from "@/contexts/terminal-context";
 
 const ProjectModal = dynamic(() => import('@/components/modals/project-modal'), {
   ssr: false,
@@ -40,6 +41,12 @@ export default function Header({
   openProject,
 }: HeaderProps) {
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const { sendCommand } = useTerminal();
+
+  const handleRunProject = () => {
+    // The \n is important to execute the command
+    sendCommand('npm run dev\n');
+  };
 
   return (
     <>
@@ -86,7 +93,7 @@ export default function Header({
             {isDownloading ? <CircleDashed className="animate-spin" /> : <Download />}
             Download
           </Button>
-          <Button variant="ghost" size="sm" disabled={!project}>
+          <Button variant="ghost" size="sm" disabled={!project} onClick={handleRunProject}>
             <Play />
             Run
           </Button>
