@@ -20,7 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, CheckCircle, XCircle, CircleDashed } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
 
 type ApiKeyModalProps = {
   isOpen: boolean;
@@ -33,11 +35,17 @@ type ApiKey = {
   key: string;
 };
 
+type KeyTestState = {
+  [keyId: string]: "testing" | "success" | "error" | "idle";
+};
+
 export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
+  const [keyTestStates, setKeyTestStates] = useState<KeyTestState>({});
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +54,7 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
         if (savedKeys) {
           setApiKeys(JSON.parse(savedKeys));
         }
+        setKeyTestStates({}); // Reset test states when modal opens
       } catch (error) {
         console.error("Failed to load API keys from localStorage", error);
       }
@@ -98,6 +107,61 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
     if (key.length <= 8) return key;
     return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
   }
+  
+  const handleTestKey = async (key: ApiKey) => {
+    setKeyTestStates(prev => ({...prev, [key.id]: 'testing' }));
+    try {
+      const response = await fetch('/api/ai/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiKey: key.key }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Test call failed');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setKeyTestStates(prev => ({...prev, [key.id]: 'success' }));
+        toast({
+          title: "Success!",
+          description: `API Key "${key.name}" is working correctly.`,
+        });
+      } else {
+        throw new Error('Test call did not succeed.');
+      }
+    } catch (error: any) {
+      setKeyTestStates(prev => ({...prev, [key.id]: 'error' }));
+       toast({
+        variant: "destructive",
+        title: "Test Failed",
+        description: `API Key "${key.name}" is not valid. ${error.message}`,
+      });
+    } finally {
+        setTimeout(() => {
+            setKeyTestStates(prev => ({ ...prev, [key.id]: 'idle' }));
+        }, 3000)
+    }
+  }
+  
+  const renderTestIcon = (keyId: string) => {
+    switch (keyTestStates[keyId]) {
+        case 'testing':
+            return <CircleDashed className="h-4 w-4 animate-spin text-blue-500" />;
+        case 'success':
+            return <CheckCircle className="h-4 w-4 text-green-500" />;
+        case 'error':
+            return <XCircle className="h-4 w-4 text-red-500" />;
+        default:
+            return null;
+    }
+  }
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -122,9 +186,15 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
                 {apiKeys.map((apiKey) => (
                   <TableRow key={apiKey.id}>
                     <TableCell className="font-medium">{apiKey.name}</TableCell>
-                    <TableCell className="font-mono">{maskApiKey(apiKey.key)}</TableCell>
+                    <TableCell className="font-mono flex items-center gap-2">
+                      {maskApiKey(apiKey.key)}
+                      {renderTestIcon(apiKey.id)}
+                    </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(apiKey)}>
+                       <Button variant="outline" size="sm" onClick={() => handleTestKey(apiKey)} disabled={keyTestStates[apiKey.id] === 'testing'}>
+                        Test
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 ml-2" onClick={() => handleEdit(apiKey)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(apiKey.id)}>

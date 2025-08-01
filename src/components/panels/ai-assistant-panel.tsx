@@ -113,7 +113,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             if (nextStep >= totalSteps) {
                 clearInterval(interval);
                 setAgentState("summarizing");
-                setTimeout(() => setAgentState("idle"), 2000); 
+                setTimeout(() => setAgentState("idle"), 3000); 
             }
             return nextStep;
         });
@@ -177,6 +177,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setMessages((prev) => [...prev, assistantMessage]);
       setAgentState("planning");
       
+      // Automatically start execution without user prompt
       handleStartExecution(result.plan);
 
     } catch (error: any) {
@@ -187,7 +188,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       };
       setMessages((prev) => [...prev, errorMessage]);
       setAgentState("error");
-      setTimeout(() => setAgentState("idle"), 2000);
+      setTimeout(() => setAgentState("idle"), 3000);
     }
   }, [agentState, handleStartExecution, agenticFlowWithRetry]);
 
@@ -232,7 +233,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     URL.revokeObjectURL(url);
   };
 
-  const AgentResponse = ({ response, setInput }: { response: AgenticFlowOutput, setInput: (value: string) => void }) => {
+  const AgentResponse = ({ response }: { response: AgenticFlowOutput }) => {
     const totalSteps = response.plan.length;
     const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing' || agentState === 'idle';
     const successfulSteps = (agentState === 'summarizing' || agentState === 'idle') ? totalSteps : executedSteps;
@@ -336,7 +337,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           </div>
         )
     }
-    return <AgentResponse response={message.content} setInput={setInput} />;
+    return <AgentResponse response={message.content} />;
   };
 
   const getAgentStatus = () => {
@@ -401,7 +402,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
               <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
                 <Mic className="w-5 h-5" />
               </Button>
-              <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()} onClick={() => sendPrompt(input)}>
+              <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()}>
                 <Send className="w-5 h-5" />
               </Button>
             </div>
