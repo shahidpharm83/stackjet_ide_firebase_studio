@@ -73,7 +73,7 @@ const FileTreeItem = ({ item, level = 0, onOpenFile }: FileTreeItemProps) => {
                   <span className="truncate">{item.name}</span>
               </div>
             </CollapsibleTrigger>
-            <CollapsibleContent>
+            <CollapsibleContent key={item.path}>
               {item.children?.map((child) => (
                   <FileTreeItem key={child.path} item={child} level={level + 1} onOpenFile={onOpenFile}/>
               ))}
