@@ -841,10 +841,12 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     </AlertDescription>
                 </Alert>
                 
-                <div className="space-y-2 pt-4">
-                    <h4 className="font-semibold text-sm">Next Steps</h4>
-                    <div className="flex flex-wrap gap-2">
+                <div className="space-y-2 pt-4 w-[95%]">
+                    <h4 className="font-semibold text-sm">Suggestions</h4>
+                    <div className="flex flex-col items-start gap-2">
                         {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
+                    </div>
+                     <div className="pt-2">
                         <Button variant="default" size="sm" onClick={() => handleDownloadPatch(plan)}>
                             <Download className="mr-2 h-4 w-4" />
                             Download Patch
@@ -1000,3 +1002,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    
