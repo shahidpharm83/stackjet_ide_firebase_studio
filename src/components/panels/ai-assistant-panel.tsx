@@ -256,8 +256,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 
                 switch (action) {
                     case 'write':
-                        const dirHandleWrite = await getDirectoryHandle(rootHandle, fileName.substring(0, fileName.lastIndexOf('/')), true);
-                        fileHandle = await dirHandleWrite.getFileHandle(fileName.substring(fileName.lastIndexOf('/') + 1), { create: true });
+                        fileHandle = await getFileHandle(rootHandle, fileName, true);
                         await typeContent(fileName, content, '');
                         onOpenFile(fileName, fileHandle, content);
                         const writableWrite = await fileHandle.createWritable();
@@ -266,10 +265,14 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         stepResult = { status: 'success', outcome: `Wrote ${content.length} bytes to ${fileName}` };
                         break;
                     case 'edit':
-                         const dirHandleEdit = await getDirectoryHandle(rootHandle, fileName.substring(0, fileName.lastIndexOf('/')), false);
-                         fileHandle = await dirHandleEdit.getFileHandle(fileName.substring(fileName.lastIndexOf('/') + 1), { create: false });
-                         const existingFileEdit = await fileHandle.getFile();
-                         const existingContent = await existingFileEdit.text();
+                         fileHandle = await getFileHandle(rootHandle, fileName, true); // Use true to create if not exists
+                         let existingContent = '';
+                         try {
+                           const existingFile = await fileHandle.getFile();
+                           existingContent = await existingFile.text();
+                         } catch (e) {
+                           // File didn't exist, which is fine. existingContent is empty.
+                         }
                          await typeContent(fileName, content, existingContent);
                          onOpenFile(fileName, fileHandle, content);
                          const writableEdit = await fileHandle.createWritable();
