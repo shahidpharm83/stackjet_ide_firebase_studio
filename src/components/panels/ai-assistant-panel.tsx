@@ -156,19 +156,18 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-     // Add timestamp to the latest user message that doesn't have one
+    // Add timestamp to the latest user message that doesn't have one
     if (messages.length > 0) {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage.role === 'user' && !lastMessage.timestamp) {
-            setMessages(prev => {
+        setMessages(prev => {
+            const lastMessage = prev[prev.length - 1];
+            if (lastMessage.role === 'user' && !lastMessage.timestamp) {
                 const newMessages = [...prev];
                 const last = newMessages[newMessages.length - 1];
-                if (last.role === 'user' && !last.timestamp) {
-                    last.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
+                last.timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 return newMessages;
-            });
-        }
+            }
+            return prev; // Return previous state if no changes are needed
+        });
     }
   }, [messages]);
   
@@ -290,7 +289,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                             throw new Error(`Invalid file name for deletion: ${fileName}`);
                         }
                         const dirPath = pathParts.join('/');
-                        const dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
+                        const dirHandle = dirPath ? await getDirectoryHandle(rootHandle, dirPath, false) : rootHandle;
                         await dirHandle.removeEntry(fileToDelete, { recursive: false });
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
@@ -968,7 +967,11 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
               </div>
             </form>
           </PopoverTrigger>
-          <PopoverContent className="w-[400px] p-0" align="start">
+          <PopoverContent 
+            className="w-[400px] p-0" 
+            align="start"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
             <div className="p-2 font-semibold text-sm border-b">Mention a file</div>
             <div className="max-h-60 overflow-y-auto">
               {fileSearch.results.length > 0 ? (
@@ -992,4 +995,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   );
 }
 
+    
     
