@@ -102,33 +102,28 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }, 800);
   }, []);
 
-
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const sendPrompt = useCallback(async (promptText: string) => {
+    if (!promptText.trim()) return;
 
     const userMessage: Message = { 
       role: "user", 
-      content: input,
+      content: promptText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
     setMessages((prev) => [...prev, userMessage]);
-    const currentInput = input;
     setInput("");
     setAgentState("thinking");
 
     try {
-      // Simulate thinking delay
       await new Promise(resolve => setTimeout(resolve, 1200));
       setAgentState("analyzing");
       
-      const result = await agenticFlow({ prompt: currentInput });
+      const result = await agenticFlow({ prompt: promptText });
 
       const assistantMessage: Message = { role: "assistant", content: result };
       setMessages((prev) => [...prev, assistantMessage]);
       setAgentState("planning");
       
-      // Automatically start execution after a brief delay to show the plan
       setTimeout(() => handleStartExecution(result.plan), 1000);
 
     } catch (error) {
@@ -140,8 +135,12 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       setMessages((prev) => [...prev, errorMessage]);
       setAgentState("error");
     }
-  }, [input, handleStartExecution]);
+  }, [handleStartExecution]);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendPrompt(input);
+  };
   
   const renderStepIcon = (action: string) => {
     switch (action) {
@@ -162,7 +161,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }
   };
 
-  const AgentResponse = ({ response }: { response: AgenticFlowOutput }) => {
+  const AgentResponse = ({ response, setInput }: { response: AgenticFlowOutput, setInput: (value: string) => void }) => {
     const totalSteps = response.plan.length;
     const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing';
     const successfulSteps = agentState === 'summarizing' ? totalSteps : executedSteps;
@@ -256,7 +255,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           </div>
         )
     }
-    return <AgentResponse response={message.content} />;
+    return <AgentResponse response={message.content} setInput={setInput} />;
   };
 
   const getAgentStatus = () => {
@@ -320,7 +319,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
               <Mic className="w-5 h-5" />
             </Button>
-            <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()}>
+            <Button type="button" size="icon" disabled={agentState !== 'idle' || !input.trim()} onClick={() => sendPrompt(input)}>
               <Send className="w-5 h-5" />
             </Button>
           </div>
