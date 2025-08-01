@@ -258,9 +258,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         fileHandle = await getFileHandle(rootHandle, fileName, true);
                         onOpenFile(fileName, fileHandle, ''); // Open with empty content first
                         await typeContent(fileName, content, '');
-                        const writableWrite = await fileHandle.createWritable();
-                        await writableWrite.write(content);
-                        await writableWrite.close();
                         stepResult = { status: 'success', outcome: `Wrote ${content.length} bytes to ${fileName}` };
                         break;
                     case 'edit':
@@ -274,9 +271,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                          }
                          onOpenFile(fileName, fileHandle, existingContent); // Ensure file is open before typing
                          await typeContent(fileName, content, existingContent);
-                         const writableEdit = await fileHandle.createWritable();
-                         await writableEdit.write(content);
-                         await writableEdit.close();
                          stepResult = { status: 'success', outcome: `Edited ${fileName}` };
                          break;
                     case 'delete':
@@ -991,8 +985,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    
-    
-
-    
