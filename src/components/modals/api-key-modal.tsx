@@ -41,7 +41,17 @@ type KeyTestState = {
 };
 
 export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const savedKeys = localStorage.getItem("geminiApiKeys");
+      return savedKeys ? JSON.parse(savedKeys) : [];
+    } catch (error) {
+      console.error("Failed to load API keys from localStorage on init", error);
+      return [];
+    }
+  });
+
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
   const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
@@ -50,15 +60,7 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
 
   useEffect(() => {
     if (isOpen) {
-      try {
-        const savedKeys = localStorage.getItem("geminiApiKeys");
-        if (savedKeys) {
-          setApiKeys(JSON.parse(savedKeys));
-        }
-        setKeyTestStates({}); // Reset test states when modal opens
-      } catch (error) {
-        console.error("Failed to load API keys from localStorage", error);
-      }
+      setKeyTestStates({}); // Reset test states when modal opens
     }
   }, [isOpen]);
 
@@ -120,12 +122,11 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
         body: JSON.stringify({ apiKey: key.key }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Test call failed');
-      }
-
       const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Test call failed');
+      }
 
       if (result.success) {
         setKeyTestStates(prev => ({...prev, [key.id]: 'success' }));
@@ -134,7 +135,7 @@ export default function ApiKeyModal({ isOpen, onOpenChange }: ApiKeyModalProps) 
           description: `API Key "${key.name}" is working correctly.`,
         });
       } else {
-        throw new Error('Test call did not succeed.');
+        throw new Error(result.error || 'Test call did not succeed.');
       }
     } catch (error: any) {
       setKeyTestStates(prev => ({...prev, [key.id]: 'error' }));
