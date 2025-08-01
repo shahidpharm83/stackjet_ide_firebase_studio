@@ -60,17 +60,6 @@ const FileTreeItem = ({ item, level = 0 }: { item: any; level?: number }) => {
 export default function FileExplorer() {
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
-      <div className="p-2 border-b border-border flex items-center justify-between h-12">
-        <h2 className="font-semibold text-base">Files</h2>
-        <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-                <Plus className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
-                <UploadCloud className="w-4 h-4" />
-            </Button>
-        </div>
-      </div>
       <ScrollArea className="flex-1 p-2">
         {fileTree.map(item => <FileTreeItem key={item.name} item={item} />)}
       </ScrollArea>

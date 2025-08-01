@@ -162,6 +162,7 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right"
     variant?: "sidebar" | "floating" | "inset"
     collapsible?: "offcanvas" | "icon" | "none"
+    defaultOpen?: boolean;
   }
 >(
   (
@@ -171,11 +172,13 @@ const Sidebar = React.forwardRef<
       collapsible = "offcanvas",
       className,
       children,
+      defaultOpen,
       ...props
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state, openMobile, setOpenMobile, open } = useSidebar()
+    const isOpen = defaultOpen !== undefined ? defaultOpen : open;
 
     if (collapsible === "none") {
       return (
@@ -216,7 +219,7 @@ const Sidebar = React.forwardRef<
       <div
         ref={ref}
         className="group peer hidden md:block text-sidebar-foreground"
-        data-state={state}
+        data-state={isOpen ? 'expanded' : 'collapsed'}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
