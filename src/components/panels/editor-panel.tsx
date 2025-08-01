@@ -28,6 +28,7 @@ export default HelloWorld;
 function SyntaxHighlighter({ code }: { code: string }) {
   const highlight = (line: string) => {
     return line
+      .replace(/</g, '&lt;')
       .replace(
         /\b(import|from|function|const|if|return|export|default)\b/g,
         '<span class="text-fuchsia-400">$&</span>'
@@ -51,7 +52,7 @@ function SyntaxHighlighter({ code }: { code: string }) {
       {code.split('\n').map((line, i) => (
         <div key={i} className="flex">
           <span className="w-12 text-right pr-4 text-muted-foreground/50 select-none">{i + 1}</span>
-          <span className={line.trim() === lineWithError.trim() ? "wavy-underline" : ""} dangerouslySetInnerHTML={{ __html: highlight(line.replace(/</g, '&lt;')) }} />
+          <span className={line.trim() === lineWithError.trim() ? "wavy-underline" : ""} dangerouslySetInnerHTML={{ __html: highlight(line) }} />
         </div>
       ))}
     </pre>
