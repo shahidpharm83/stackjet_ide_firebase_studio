@@ -1,11 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Provides AI-powered code suggestions and autocompletion.
- *
- * - aiCodeAssist - A function that provides code suggestions based on the given code and context.
- * - AiCodeAssistInput - The input type for the aiCodeAssist function.
- * - AiCodeAssistOutput - The return type for the aiCodeAssist function.
+ * @fileOverview This file is deprecated. The new agentic flow is in agentic-flow.ts.
  */
 
 import {ai} from '@/ai/genkit';

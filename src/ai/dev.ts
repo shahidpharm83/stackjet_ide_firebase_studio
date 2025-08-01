@@ -1,4 +1,4 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/ai-code-assist.ts';
+import '@/ai/flows/agentic-flow.ts';
