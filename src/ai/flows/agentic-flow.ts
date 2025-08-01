@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -56,10 +57,11 @@ const agenticPrompt = ai.definePrompt({
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan.
-2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read.
-3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
-4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
+1.  **Analyze Project Context:** Before formulating a plan, you MUST determine the technology stack (e.g., language, framework, libraries) of the project. Your first steps in the plan should often be to 'read' key configuration or manifest files like 'package.json', 'tsconfig.json', 'next.config.ts', etc. Your entire plan must be consistent with the identified technology stack. For example, do not suggest Python code for a TypeScript/React project.
+2.  **Analyze User Request:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan. Your analysis must incorporate the project context you discovered.
+3.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. All code you generate must match the project's established coding style and conventions.
+4.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+5.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**
 "{{{prompt}}}"
@@ -103,10 +105,11 @@ export const agenticFlow = ai.defineFlow(
 Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
 **Your Process:**
-1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan.
-2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read.
-3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
-4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
+1.  **Analyze Project Context:** Before formulating a plan, you MUST determine the technology stack (e.g., language, framework, libraries) of the project. Your first steps in the plan should often be to 'read' key configuration or manifest files like 'package.json', 'tsconfig.json', 'next.config.ts', etc. Your entire plan must be consistent with the identified technology stack. For example, do not suggest Python code for a TypeScript/React project.
+2.  **Analyze User Request:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process. If an image is provided, describe how it influences your plan. Your analysis must incorporate the project context you discovered.
+3.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, read, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'. Your plan should be based on the user's request and the context of the files you read. All code you generate must match the project's established coding style and conventions.
+4.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+5.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
 **User Request:**
 "{{{prompt}}}"
@@ -132,3 +135,5 @@ Ensure all file paths are relative. For any new code, provide the complete file 
     }
   }
 );
+
+    
