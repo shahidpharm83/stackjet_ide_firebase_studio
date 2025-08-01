@@ -251,10 +251,6 @@ export default function Home() {
     }
   };
 
-  const toggleTerminal = () => {
-    setActiveMainView(prev => (prev === "terminal" ? "editor" : "terminal"));
-  };
-  
   if (!hydrated) {
     return null;
   }
@@ -329,7 +325,7 @@ export default function Home() {
         </PanelGroup>
         <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
       </div>
-      <StatusBar onToggleTerminal={toggleTerminal} />
+      <StatusBar onToggleTerminal={() => setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal')} />
     </div>
   );
 }
