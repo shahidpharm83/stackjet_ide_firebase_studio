@@ -43,11 +43,18 @@ export default function Home() {
   const [activeFile, setActiveFile] = useState<string | null>(null);
 
   const refreshFileTree = useCallback(async () => {
-    if (project) {
+    if (project?.handle) {
+      try {
+        // Request permissions again to ensure they are fresh
+        await project.handle.requestPermission({ mode: 'readwrite' });
         const tree = await getDirectoryTree(project.handle);
-        setProject(p => p ? { ...p, tree } : null);
+        // Important: We update the handle in the state as well, in case it was re-instantiated
+        setProject(p => p ? { ...p, tree, handle: project.handle } : null);
+      } catch (error) {
+        console.error("Error refreshing file tree:", error);
+      }
     }
-  }, [project]);
+  }, [project?.handle]);
 
   const handleOpenFile = useCallback(async (path: string, handle: FileSystemFileHandle) => {
     // Check if file is already open

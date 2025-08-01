@@ -169,7 +169,11 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         try {
             if ('action' in step) { // It's a file operation
                 const { action, fileName, content } = step;
-                const fileHandle = await getFileHandle(project.handle, fileName, true);
+
+                // We need to get a fresh handle for the project root for each operation
+                const rootHandle = project.handle;
+
+                const fileHandle = await getFileHandle(rootHandle, fileName, true);
 
                 switch (action) {
                     case 'write':
@@ -185,14 +189,40 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                         const parts = fileName.split('/');
                         const name = parts.pop()!;
                         const dirPath = parts.join('/');
-                        const dirHandle = await getDirectoryHandle(project.handle, dirPath, false);
+                        const dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
                         await dirHandle.removeEntry(name, { recursive: true });
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
+                         // For rename, we need to handle moving the file.
                         const newPath = step.content || '';
                         if (!newPath) throw new Error("New name not provided for rename operation.");
-                        await fileHandle.move(newPath); 
+                        
+                        const newPathParts = newPath.split('/');
+                        const newFileName = newPathParts.pop();
+                        if (!newFileName) throw new Error("Invalid new file path for rename.");
+                        const newDirPath = newPathParts.join('/');
+
+                        // Create the destination directory if it doesn't exist.
+                        const destDirHandle = await getDirectoryHandle(rootHandle, newDirPath, true);
+                        
+                        // We can't directly rename across directories with a simple name change,
+                        // so we read, write to new location, and then delete the old one.
+                        const oldFile = await fileHandle.getFile();
+                        const oldContent = await oldFile.text();
+
+                        const newFileHandle = await destDirHandle.getFileHandle(newFileName, { create: true });
+                        const newWritable = await newFileHandle.createWritable();
+                        await newWritable.write(oldContent);
+                        await newWritable.close();
+
+                        // Now delete the old file
+                        const oldParts = fileName.split('/');
+                        const oldName = oldParts.pop()!;
+                        const oldDirPath = oldParts.join('/');
+                        const oldDirHandle = await getDirectoryHandle(rootHandle, oldDirPath, false);
+                        await oldDirHandle.removeEntry(oldName);
+
                         stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${newPath}` };
                         break;
                     default:
@@ -219,6 +249,12 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             }
             return msg;
         }));
+
+        // If the step was successful, refresh the file tree to get fresh handles
+        if (stepResult.status === 'success') {
+            await refreshFileTree();
+        }
+
          // Small delay between steps
         await new Promise(resolve => setTimeout(resolve, 200));
     }
@@ -242,7 +278,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     }));
     
     setAgentState("idle");
-    refreshFileTree(); // Refresh the file explorer view
+    // Final refresh after all operations are done
+    await refreshFileTree();
   }, [project, refreshFileTree, onOpenFile, onFileContentChange]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
