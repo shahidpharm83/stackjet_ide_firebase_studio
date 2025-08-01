@@ -8,9 +8,18 @@ type MainPanelProps = {
   activeFile: string | null;
   onCloseFile: (path: string) => void;
   onActiveFileChange: (path: string) => void;
+  onFileContentChange: (path: string, newContent: string) => void;
+  isExecuting: boolean;
 };
 
-export default function MainPanel({ openFiles, activeFile, onCloseFile, onActiveFileChange }: MainPanelProps) {
+export default function MainPanel({ 
+  openFiles, 
+  activeFile, 
+  onCloseFile, 
+  onActiveFileChange,
+  onFileContentChange,
+  isExecuting
+}: MainPanelProps) {
 
   const getFileByPath = (path: string | null) => {
     if (!path) return null;
@@ -55,9 +64,15 @@ export default function MainPanel({ openFiles, activeFile, onCloseFile, onActive
           ))}
         </TabsList>
 
-        <TabsContent value={activeFile || ""} className="flex-1 overflow-auto mt-0">
-          <EditorPanel file={currentFile} />
-        </TabsContent>
+        {openFiles.map(file => (
+          <TabsContent key={file.path} value={file.path} className="flex-1 overflow-auto mt-0">
+            <EditorPanel 
+                file={file}
+                onContentChange={(newContent) => onFileContentChange(file.path, newContent)}
+                isExecuting={isExecuting}
+             />
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );

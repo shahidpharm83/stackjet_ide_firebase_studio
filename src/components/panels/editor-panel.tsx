@@ -1,52 +1,31 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OpenFile } from "@/app/page";
-import { useEffect, useState } from "react";
-
-// A simple syntax highlighter for demonstration
-function SyntaxHighlighter({ code }: { code: string }) {
-  const highlight = (line: string) => {
-    // Basic HTML entity escaping
-    const escapedLine = line
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-
-    // All of these replacements are on a line that's been HTML-escaped
-    const highlightedLine = escapedLine
-      .replace(
-        /\b(import|from|function|const|if|return|export|default|class|extends|async|await|let|var)\b/g,
-        '<span class="text-fuchsia-400">$&</span>'
-      )
-      .replace(
-        /\b(React|useState|useEffect|useCallback|console|window|document|localStorage|true|false|null)\b/g,
-        '<span class="text-accent">$&</span>'
-      )
-      .replace(/(&quot;.*?&quot;)|(&#039;.*?&#039;)/g, '<span class="text-amber-400">$&</span>')
-      .replace(/(\/\/.*)/g, '<span class="text-green-500">$&</span>')
-       .replace(/([{}\[\]\(\)])/g, '<span class="text-gray-400">$&</span>');
-
-    return highlightedLine;
-  };
-  
-  return (
-    <pre className="font-code text-sm leading-6">
-      {code.split('\n').map((line, i) => (
-        <div key={i} className="flex">
-          <span className="w-12 text-right pr-4 text-muted-foreground/50 select-none">{i + 1}</span>
-          <span dangerouslySetInnerHTML={{ __html: highlight(line) }} />
-        </div>
-      ))}
-    </pre>
-  );
-}
+import { useEffect, useRef } from "react";
+import { Textarea } from "@/components/ui/textarea";
 
 type EditorPanelProps = {
   file: OpenFile | null;
+  onContentChange: (newContent: string) => void;
+  isExecuting: boolean;
 };
 
-export default function EditorPanel({ file }: EditorPanelProps) {
+export default function EditorPanel({ file, onContentChange, isExecuting }: EditorPanelProps) {
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const syncScroll = () => {
+      if (lineNumbersRef.current && textareaRef.current) {
+        lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
+      }
+    };
+
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.addEventListener('scroll', syncScroll);
+      return () => textarea.removeEventListener('scroll', syncScroll);
+    }
+  }, []);
 
   if (!file) {
     return (
@@ -56,11 +35,28 @@ export default function EditorPanel({ file }: EditorPanelProps) {
     );
   }
 
+  const lineCount = file.content.split('\n').length;
+
   return (
-    <ScrollArea className="flex-1 h-full">
-        <div className="p-4">
-            <SyntaxHighlighter code={file.content} />
-        </div>
-    </ScrollArea>
+    <div className="flex-1 h-full flex font-code text-sm">
+      <div 
+        ref={lineNumbersRef} 
+        className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background py-4"
+        style={{ lineHeight: '1.5rem', overflow: 'hidden' }}
+      >
+        {Array.from({ length: lineCount }, (_, i) => (
+          <div key={i}>{i + 1}</div>
+        ))}
+      </div>
+      <Textarea
+        ref={textareaRef}
+        value={file.content}
+        onChange={(e) => onContentChange(e.target.value)}
+        readOnly={isExecuting}
+        className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6"
+        style={{ lineHeight: '1.5rem' }}
+        placeholder="Start typing..."
+      />
+    </div>
   );
 }

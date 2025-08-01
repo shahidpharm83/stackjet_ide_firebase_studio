@@ -41,14 +41,14 @@ export default function Home() {
   const [rightPanelVisible, setRightPanelVisible] = useState(false);
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+
 
   const refreshFileTree = useCallback(async () => {
     if (project?.handle) {
       try {
-        // Request permissions again to ensure they are fresh
         await project.handle.requestPermission({ mode: 'readwrite' });
         const tree = await getDirectoryTree(project.handle);
-        // Important: We update the handle in the state as well, in case it was re-instantiated
         setProject(p => p ? { ...p, tree, handle: project.handle } : null);
       } catch (error) {
         console.error("Error refreshing file tree:", error);
@@ -56,21 +56,27 @@ export default function Home() {
     }
   }, [project?.handle]);
 
-  const handleOpenFile = useCallback(async (path: string, handle: FileSystemFileHandle) => {
-    // Check if file is already open
+  const handleOpenFile = useCallback(async (path: string, handle: FileSystemFileHandle, content?: string) => {
     if (openFiles.some(f => f.path === path)) {
       setActiveFile(path);
+      // If content is provided, update it for the already open file.
+      if (typeof content !== 'undefined') {
+          setOpenFiles(prev => prev.map(f => f.path === path ? { ...f, content } : f));
+      }
       return;
     }
 
     try {
-      const file = await handle.getFile();
-      const content = await file.text();
+      let fileContent = content;
+      if (typeof fileContent === 'undefined') {
+        const file = await handle.getFile();
+        fileContent = await file.text();
+      }
       const newFile: OpenFile = {
         name: handle.name,
         path,
         handle,
-        content,
+        content: fileContent,
       };
       setOpenFiles(prev => [...prev, newFile]);
       setActiveFile(path);
@@ -79,10 +85,10 @@ export default function Home() {
     }
   }, [openFiles]);
 
+
   const handleCloseFile = (path: string) => {
     setOpenFiles(prev => prev.filter(f => f.path !== path));
     if (activeFile === path) {
-      // If closing the active file, set active to another file or null
       setActiveFile(prev => {
           const remainingFiles = openFiles.filter(f => f.path !== path);
           return remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1].path : null;
@@ -97,6 +103,10 @@ export default function Home() {
   const handleFileContentChange = useCallback((path: string, newContent: string) => {
     setOpenFiles(prev => prev.map(f => f.path === path ? { ...f, content: newContent } : f));
   }, []);
+
+  const getOpenFile = useCallback((path: string) => {
+    return openFiles.find(f => f.path === path);
+  }, [openFiles]);
 
 
   const handleOpenFolder = useCallback(async () => {
@@ -162,6 +172,7 @@ export default function Home() {
                         refreshFileTree={refreshFileTree} 
                         onOpenFile={handleOpenFile}
                         onFileContentChange={handleFileContentChange}
+                        getOpenFile={getOpenFile}
                     />
                   </TabsContent>
                 </Tabs>
@@ -177,6 +188,8 @@ export default function Home() {
                   activeFile={activeFile}
                   onCloseFile={handleCloseFile}
                   onActiveFileChange={handleActiveFileChange}
+                  onFileContentChange={handleFileContentChange}
+                  isExecuting={isExecuting}
                 />
               </Panel>
               {isTerminalOpen && (
