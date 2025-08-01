@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { testApiKeyFlow } from '@/ai/flows/test-key-flow';
-import { run } from 'genkit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'API key is required' }, { status: 400 });
     }
 
-    const isSuccess = await run(testApiKeyFlow, apiKey);
+    const isSuccess = await testApiKeyFlow(apiKey);
 
     if (isSuccess) {
       return NextResponse.json({ success: true });

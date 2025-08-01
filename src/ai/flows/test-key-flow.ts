@@ -2,7 +2,7 @@
 /**
  * @fileOverview A simple flow to test if a Gemini API key is valid.
  *
- * - testApiKey - A function that takes an API key and performs a test call.
+ * - testApiKeyFlow - A function that takes an API key and performs a test call.
  */
 
 import { genkit, z } from 'genkit';
