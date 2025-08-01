@@ -38,6 +38,7 @@ type Message = {
   executedPlan?: ExecutedStep[];
   isExecuting?: boolean;
   timings?: Timings;
+  summaryComplete?: boolean;
 };
 
 type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error";
@@ -138,29 +139,29 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         if (stepIndex >= totalSteps) {
             clearInterval(interval);
             setAgentState("summarizing");
+
+            // Final update to mark execution and summary as complete
             setMessages(prev => prev.map((msg, idx) => {
                 if (idx === messageIndex) {
+                    const executionEndTime = Date.now();
                     return { 
                         ...msg, 
                         isExecuting: false,
-                        timings: { ...(msg.timings || { start: Date.now() }), executionEnd: Date.now() } 
+                        summaryComplete: true, // Explicitly mark summary as ready
+                        timings: { 
+                            ...(msg.timings || { start: Date.now() }), 
+                            executionEnd: executionEndTime,
+                            summaryEnd: Date.now() 
+                        } 
                     };
                 }
                 return msg;
             }));
 
+            // Set agent back to idle after summary is shown
             setTimeout(() => {
                 setAgentState("idle");
-                setMessages(prev => prev.map((msg, idx) => {
-                    if (idx === messageIndex) {
-                        return { 
-                            ...msg,
-                            timings: { ...(msg.timings || { start: Date.now() }), summaryEnd: Date.now() } 
-                        };
-                    }
-                    return msg;
-                }));
-            }, 1500); // Time for summary
+            }, 500);
             return;
         }
         
@@ -251,6 +252,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           plan: result.plan,
           executedPlan: [],
           isExecuting: false,
+          summaryComplete: false,
           timings: { start: startTime, thinkingEnd }
       };
       
@@ -342,7 +344,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     const totalSteps = plan.length;
     const executionProgress = totalSteps > 0 ? (executedPlan.length / totalSteps) * 100 : 0;
     const timings = message.timings;
-    const isDone = !isExecuting && executedPlan.length === totalSteps && executedPlan.length > 0 && timings?.summaryEnd;
+    const isDone = message.summaryComplete;
     
     const totalTime = timings?.summaryEnd && timings?.start ? timings.summaryEnd - timings.start : 0;
 
@@ -565,5 +567,3 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     </div>
   );
 }
-
-    
