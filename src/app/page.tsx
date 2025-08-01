@@ -282,7 +282,7 @@ export default function Home() {
                       onOpenFile={handleOpenFile}
                     />
                   </TabsContent>
-                  <TabsContent value="ai" className="flex-1 overflow-hidden">
+                  <TabsContent value="ai" className="flex-1 overflow-hidden" forceMount>
                     <AiAssistantPanel 
                         project={project} 
                         refreshFileTree={refreshFileTree} 
