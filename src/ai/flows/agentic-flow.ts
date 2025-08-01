@@ -60,6 +60,11 @@ Your task is to understand a user's request, break it down into a sequence of op
 3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
 
+**Special Instructions for Flutter:**
+- If the user asks to create a Flutter application, your first step must be a 'command' operation to run 'flutter create <app_name>', where '<app_name>' is a suitable name derived from the user's prompt (e.g., 'flutter create my_awesome_app').
+- The primary application logic for a Flutter app should be placed in 'lib/main.dart'.
+- If you add or modify dependencies in a 'pubspec.yaml' file, you must add a subsequent 'command' step to run 'flutter pub get'.
+
 **User Request:**
 "{{{prompt}}}"
 
@@ -100,6 +105,11 @@ Your task is to understand a user's request, break it down into a sequence of op
 2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'.
 3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
 4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
+
+**Special Instructions for Flutter:**
+- If the user asks to create a Flutter application, your first step must be a 'command' operation to run 'flutter create <app_name>', where '<app_name>' is a suitable name derived from the user's prompt (e.g., 'flutter create my_awesome_app').
+- The primary application logic for a Flutter app should be placed in 'lib/main.dart'.
+- If you add or modify dependencies in a 'pubspec.yaml' file, you must add a subsequent 'command' step to run 'flutter pub get'.
 
 **User Request:**
 "{{{prompt}}}"
