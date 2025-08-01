@@ -1,0 +1,131 @@
+diff --git a/node_modules/node-pty/lib/index.js b/node_modules/node-pty/lib/index.js
+index 0352277..1bfd763 100644
+--- a/node_modules/node-pty/lib/index.js
++++ b/node_modules/node-pty/lib/index.js
+@@ -19,7 +19,7 @@ const path = require('path');
+  * not found, the search will continue in the parent directories.
+  */
+ function findFirst(name, searchPaths) {
+-    for (let i = 0; i < searchPaths.length; i++) {
++    for (let i = 0; i < (searchPaths === null || searchPaths === void 0 ? void 0 : searchPaths.length); i++) {
+         let searchPath = searchPaths[i];
+         while (searchPath) {
+             const BinPath = path.join(searchPath, 'build', name);
+@@ -37,7 +37,7 @@ function findFirst(name, searchPaths) {
+  * Locate a binding that won't fail to load.
+  */
+ function findBinding(searchPaths) {
+-    const found = findFirst(getBindingName(), searchPaths);
++    const found = findFirst(getBindingName(), searchPaths !== null && searchPaths !== void 0 ? searchPaths : [__dirname]);
+     if (!found) {
+         if (process.env['NODE_PTY_PREBUILT_TARGET_DIR']) {
+             console.error(`node-pty native binding not found in ${process.env['NODE_PTY_PREBUILT_TARGET_DIR']}`);
+diff --git a/node_modules/node-pty/lib/path-finder.js b/node_modules/node-pty/lib/path-finder.js
+index 287c805..b08b5f6 100644
+--- a/node_modules/node-pty/lib/path-finder.js
++++ b/node_modules/node-pty/lib/path-finder.js
+@@ -130,7 +130,7 @@ function findInPath(command, searchPaths) {
+  * searchPaths will be used.
+  */
+ function findInPathSync(command, searchPaths) {
+-    const validPaths = searchPaths || path_1.delimiter + process.env.PATH || '';
++    const validPaths = searchPaths || path_1.delimiter + (process.env.PATH || '');
+     const candidates = validPaths.split(path_1.delimiter);
+     if (isWindows && !command.endsWith('.exe')) {
+         command += '.exe';
+diff --git a/node_modules/node-pty/lib/terminal.js b/node_modules/node-pty/lib/terminal.js
+index ce3e52f..07119ff 100644
+--- a/node_modules/node-pty/lib/terminal.js
++++ b/node_modules/node-pty/lib/terminal.js
+@@ -52,7 +52,7 @@ function getCwd(options) {
+     return process.env.PWD || process.cwd();
+ }
+ function getShell(options) {
+-    if (options.shell) {
++    if (options === null || options === void 0 ? void 0 : options.shell) {
+         return options.shell;
+     }
+     if (process.env.SHELL && !isWindows) {
+@@ -107,13 +107,13 @@ class Terminal {
+         this._pid = this._pty.pid;
+         this._fd = this._pty.fd;
+         this._pty.on('data', data => {
+-            this._dataListener(data);
++            this._dataListener && this._dataListener(data);
+         });
+         this._pty.on('exit', (exitCode, signal) => {
+-            this._exitListener(exitCode, signal);
++            this._exitListener && this._exitListener(exitCode, signal);
+             this._pid = 0;
+             this._fd = -1;
+-            this._closeListener();
++            this._closeListener && this._closeListener();
+         });
+     }
+     /** See IPty.pid */
+diff --git a/node_modules/node-pty/lib/windowsPtyAgent.js b/node_modules/node-pty/lib/windowsPtyAgent.js
+index c8c460d..aa3378d 100644
+--- a/node_modules/node-pty/lib/windowsPtyAgent.js
++++ b/node_modules/node-pty/lib/windowsPtyAgent.js
+@@ -118,7 +118,7 @@ class WindowsPtyAgent {
+                 return;
+             }
+             if (this._isConPty) {
+-                this._pendingInitialData = this._pendingInitialData.concat(this._extractAndProcessData(data));
++                this._pendingInitialData = this._pendingInitialData.concat(this._extractAndProcessData(data) || []);
+                 this._initialDataTimer = setTimeout(() => this._maybeProcessPendingInitialData(), 10);
+             }
+             else {
+@@ -194,7 +194,7 @@ class WindowsPtyAgent {
+     _maybeProcessPendingInitialData() {
+         if (this._pendingInitialData.length > 0) {
+             const data = this._pendingInitialData;
+-            this._onProcessData(data.reduce((a, b) => a + b));
++            this._onProcessData(data.reduce((a, b) => a + (b || '')));
+             this._pendingInitialData.length = 0;
+         }
+     }
+diff --git a/node_modules/node-pty/lib/windowsTerminal.js b/node_modules/node-pty/lib/windowsTerminal.js
+index 451b632..653ebfe 100644
+--- a/node_modules/node-pty/lib/windowsTerminal.js
++++ b/node_modules/node-pty/lib/windowsTerminal.js
+@@ -252,7 +252,7 @@ class WindowsTerminal {
+         // terminal has been disposed of.
+         const name = path_1.join(this._tmpDir, `${this.pid}.sock`);
+         const conoutPipeName = path_1.join(this._tmpDir, `${this.pid}.conout`);
+-        fs.unlink(name, () => { });
++        fs.unlink(name, () => { return; });
+         // Ensure conout is disconnected
+         if (this._conoutSocket) {
+             this._conoutSocket.end();
+@@ -262,7 +262,7 @@ class WindowsTerminal {
+             this._conoutSocket.unref();
+         }
+         if (this._conoutConnection) {
+-            fs.unlink(conoutPipeName, () => { });
++            fs.unlink(conoutPipeName, () => { return; });
+         }
+         // Jettison resources, key by pid
+         delete terminalLock[this.pid];
+diff --git a/node_modules/node-pty/scripts/install.js b/node_modules/node-pty/scripts/install.js
+index 455e824..2d35252 100644
+--- a/node_modules/node-pty/scripts/install.js
++++ b/node_modules/node-pty/scripts/install.js
+@@ -7,4 +7,4 @@ if (process.platform !== 'win32' && process.env.NODE_PTY_USE_PREBUILT !== 'false
+   try {
+     console.log('Attempting to use pre-built node-pty for your platform.');
+     require('../lib/prebuilt');
+-  } catch (err) {}
++  } catch (err) { /* ignore */ }
+ }
+diff --git a/node_modules/node-pty/scripts/post-install.js b/node_modules/node-pty/scripts/post-install.js
+index 32d5612..e69de29 100644
+--- a/node_modules/node-pty/scripts/post-install.js
++++ b/node_modules/node-pty/scripts/post-install.js
+@@ -1,4 +1,4 @@
+ /**
+  * This is a dummy file that will be used by patch-package to do its magic.
+  * See the patch file for the actual post-install script.
+- */
+\ No newline at end of file
++ */

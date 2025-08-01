@@ -11,7 +11,6 @@ import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
 import { File, Bot, Loader } from "lucide-react";
-import TerminalPanel from "@/components/panels/terminal-panel";
 import {
   PanelGroup,
   Panel,
@@ -39,7 +38,6 @@ export interface OpenFile {
 type LeftPanel = "files" | "ai";
 
 export default function Home() {
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [project, setProject] = useState<Project | null>(null);
   const [leftPanelVisible, setLeftPanelVisible] = useState(true);
   const [activeLeftPanel, setActiveLeftPanel] = useState<LeftPanel>("files");
@@ -310,14 +308,6 @@ export default function Home() {
                   hydrated={hydrated}
                 />
               </Panel>
-              {isTerminalOpen && (
-                <>
-                  <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors" />
-                  <Panel defaultSize={25} minSize={10}>
-                    <TerminalPanel projectOpen={!!project} />
-                  </Panel>
-                </>
-              )}
             </PanelGroup>
           </Panel>
           {rightPanelVisible && (
@@ -331,7 +321,7 @@ export default function Home() {
         </PanelGroup>
         <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
       </div>
-      <StatusBar onTerminalToggle={() => setIsTerminalOpen(!isTerminalOpen)} />
+      <StatusBar />
     </div>
   );
 }
