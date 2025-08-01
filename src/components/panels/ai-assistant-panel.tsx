@@ -284,8 +284,14 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                          stepResult = { status: 'success', outcome: `Edited ${fileName}` };
                          break;
                     case 'delete':
-                        const dirHandleDelete = await getDirectoryHandle(rootHandle, fileName.substring(0, fileName.lastIndexOf('/')), false);
-                        await dirHandleDelete.removeEntry(fileName.substring(fileName.lastIndexOf('/') + 1), { recursive: false });
+                        const pathParts = fileName.split('/').filter(p => p);
+                        const fileToDelete = pathParts.pop();
+                        if (!fileToDelete) {
+                            throw new Error(`Invalid file name for deletion: ${fileName}`);
+                        }
+                        const dirPath = pathParts.join('/');
+                        const dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
+                        await dirHandle.removeEntry(fileToDelete, { recursive: false });
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
@@ -985,3 +991,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    
