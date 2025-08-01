@@ -63,3 +63,17 @@
   text-decoration-style: wavy;
   text-decoration-color: hsl(var(--destructive));
 }
+
+.wavy-underline-editor {
+  position: relative;
+  text-decoration: wavy underline hsl(var(--primary) / 0.8);
+  text-underline-offset: 4px;
+  -webkit-text-decoration-color: hsl(var(--primary) / 0.8); /* Safari */
+  animation: wave 2s linear infinite;
+}
+
+@keyframes wave {
+ 0% { text-decoration-color: hsl(var(--primary) / 0.6); }
+ 50% { text-decoration-color: hsl(var(--primary) / 1.0); }
+ 100% { text-decoration-color: hsl(var(--primary) / 0.6); }
+}

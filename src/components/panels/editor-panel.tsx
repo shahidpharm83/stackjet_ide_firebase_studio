@@ -1,7 +1,8 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { OpenFile } from "@/app/page";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 type EditorPanelProps = {
   file: OpenFile | null;
@@ -12,6 +13,7 @@ type EditorPanelProps = {
 export default function EditorPanel({ file, onContentChange, isExecuting }: EditorPanelProps) {
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [activeLine, setActiveLine] = useState(-1);
 
   useEffect(() => {
     const syncScroll = () => {
@@ -26,6 +28,15 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
       return () => textarea.removeEventListener('scroll', syncScroll);
     }
   }, []);
+
+  useEffect(() => {
+    if (isExecuting && file) {
+      const lineCount = file.content.split('\n').length;
+      setActiveLine(lineCount);
+    } else {
+      setActiveLine(-1);
+    }
+  }, [file?.content, isExecuting, file]);
 
   if (!file) {
     return (
@@ -45,7 +56,15 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
         style={{ lineHeight: '1.5rem', overflow: 'hidden' }}
       >
         {Array.from({ length: lineCount }, (_, i) => (
-          <div key={i} className="py-2">{i + 1}</div>
+          <div 
+            key={i} 
+            className={cn(
+              "py-2 px-1", 
+              isExecuting && i + 1 === activeLine ? "wavy-underline-editor" : ""
+            )}
+          >
+            {i + 1}
+          </div>
         ))}
       </div>
       <Textarea

@@ -195,12 +195,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   
   const typeContent = (filePath: string, content: string, initialContent = ''): Promise<void> => {
     return new Promise(resolve => {
-        const openFile = getOpenFile(filePath);
-        if (!openFile) {
-            // It's a new file, open it first.
-             handleOpenFileWithContent(filePath, content);
-        }
-        
         let currentContent = initialContent;
         const lines = content.split('\n');
         let lineIndex = 0;
@@ -210,8 +204,9 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 currentContent = (lineIndex > 0 ? currentContent + '\n' : '') + lines[lineIndex];
                 onFileContentChange(filePath, currentContent);
                 lineIndex++;
-                setTimeout(typeLine, 50); // Adjust typing speed here
+                setTimeout(typeLine, 100); // Slower typing speed
             } else {
+                onFileContentChange(filePath, content); // Ensure final content is set
                 resolve();
             }
         }
@@ -259,8 +254,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                 switch (action) {
                     case 'write':
                         fileHandle = await getFileHandle(rootHandle, fileName, true);
+                        onOpenFile(fileName, fileHandle, ''); // Open with empty content first
                         await typeContent(fileName, content, '');
-                        onOpenFile(fileName, fileHandle, content);
                         const writableWrite = await fileHandle.createWritable();
                         await writableWrite.write(content);
                         await writableWrite.close();
@@ -270,13 +265,13 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                          fileHandle = await getFileHandle(rootHandle, fileName, true); // Use true to create if not exists
                          let existingContent = '';
                          try {
-                           const existingFile = await fileHandle.getFile();
-                           existingContent = await existingFile.text();
+                           const fileToRead = await fileHandle.getFile();
+                           existingContent = await fileToRead.text();
                          } catch (e) {
                            // File didn't exist, which is fine. existingContent is empty.
                          }
+                         onOpenFile(fileName, fileHandle, existingContent); // Ensure file is open before typing
                          await typeContent(fileName, content, existingContent);
-                         onOpenFile(fileName, fileHandle, content);
                          const writableEdit = await fileHandle.createWritable();
                          await writableEdit.write(content);
                          await writableEdit.close();
@@ -395,7 +390,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     
     setAgentState("idle");
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile, handleOpenFileWithContent]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string, imageDataUri?: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
