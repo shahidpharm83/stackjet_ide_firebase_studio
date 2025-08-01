@@ -128,14 +128,14 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   }, [messages, agentState]);
   
   // Helper to get a directory handle, creating it if it doesn't exist
-  const getDirectoryHandle = async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemDirectoryHandle> => {
+  const getDirectoryHandle = useCallback(async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemDirectoryHandle> => {
     let currentHandle = root;
     const parts = path.split('/').filter(p => p);
     for (const part of parts) {
         currentHandle = await currentHandle.getDirectoryHandle(part, { create });
     }
     return currentHandle;
-  };
+  }, []);
   
   // Helper to get a file handle, creating directories if needed
   const getFileHandle = async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemFileHandle> => {
@@ -151,7 +151,10 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
   
   const typeContent = (filePath: string, content: string, initialContent = ''): Promise<void> => {
     return new Promise(resolve => {
-        onOpenFile(filePath, {} as FileSystemFileHandle, initialContent); // We might not have a handle yet, so pass a dummy
+        const openFile = getOpenFile(filePath);
+        if (!openFile) {
+            onOpenFile(filePath, {} as FileSystemFileHandle, initialContent); // We might not have a handle yet, so pass a dummy
+        }
         let currentContent = initialContent;
         const lines = content.split('\n');
         let lineIndex = 0;
@@ -215,8 +218,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     case 'edit':
                          dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
                          fileHandle = await dirHandle.getFileHandle(name, { create: false });
-                         const existingFile = await fileHandle.getFile();
-                         const existingContent = await existingFile.text();
+                         const existingFileEdit = await fileHandle.getFile();
+                         const existingContent = await existingFileEdit.text();
                          await typeContent(fileName, content, existingContent);
                          onOpenFile(fileName, fileHandle, content);
                          const writableEdit = await fileHandle.createWritable();
@@ -226,7 +229,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                          break;
                     case 'delete':
                         dirHandle = await getDirectoryHandle(rootHandle, dirPath, false);
-                        await dirHandle.removeEntry(name, { recursive: true });
+                        await dirHandle.removeEntry(name, { recursive: false });
                         stepResult = { status: 'success', outcome: `Deleted ${fileName}` };
                         break;
                     case 'rename':
@@ -248,6 +251,13 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
 
                         stepResult = { status: 'success', outcome: `Renamed ${fileName} to ${content}` };
                         break;
+                    case 'read':
+                        fileHandle = await getFileHandle(rootHandle, fileName);
+                        const file = await fileHandle.getFile();
+                        const fileContent = await file.text();
+                        const truncatedContent = fileContent.length > 500 ? fileContent.substring(0, 500) + '...' : fileContent;
+                        stepResult = { status: 'success', outcome: `Read ${fileName}:\n\n${truncatedContent}` };
+                        break;
                     default:
                         stepResult = { status: 'error', outcome: `Unsupported file action: ${action}` };
                 }
@@ -258,6 +268,8 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             console.error(`Execution failed for step:`, step, error);
             stepResult = { status: 'error', outcome: error.message };
         }
+        
+        await refreshFileTree();
 
         const executedStep: ExecutedStep = {
             ...step,
@@ -266,8 +278,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             ...stepResult,
         };
         
-        await refreshFileTree();
-
         setMessages(prev => prev.map((msg, idx) => {
             if (idx === messageIndex) {
                 return { ...msg, executedPlan: [...(msg.executedPlan || []), executedStep] };
@@ -297,7 +307,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     
     setAgentState("idle");
     await refreshFileTree();
-  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent]);
+  }, [project, refreshFileTree, onOpenFile, onFileContentChange, getFileHandle, getDirectoryHandle, typeContent, getOpenFile]);
 
   const agenticFlowWithRetry = useCallback(async (promptText: string): Promise<AgenticFlowOutput> => {
     let keys: ApiKey[] = [];
@@ -388,7 +398,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, project, startExecution]);
+  }, [agentState, agenticFlowWithRetry, project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -533,7 +543,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                               { 'command' in step ? (
                                 <CommandOutput command={step.command} outcome={step.outcome} status={step.status} />
                               ) : (
-                                <p className="text-xs text-muted-foreground pl-7 mt-1">{step.outcome}</p>
+                                <p className="text-xs text-muted-foreground pl-7 mt-1 whitespace-pre-wrap">{step.outcome}</p>
                               )}
                             </div>
                           )
@@ -688,3 +698,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    
