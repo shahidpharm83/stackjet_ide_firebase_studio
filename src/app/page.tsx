@@ -110,7 +110,7 @@ export default function Home() {
           {rightPanelVisible && (
             <>
               <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
-              <Panel defaultSize={25} minSize={20}>
+              <Panel defaultSize={20} minSize={15}>
                   <PreviewPanel projectOpen={!!project} />
               </Panel>
             </>
