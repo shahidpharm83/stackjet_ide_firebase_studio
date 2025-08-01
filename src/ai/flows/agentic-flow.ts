@@ -75,11 +75,9 @@ export const agenticFlow = ai.defineFlow(
     outputSchema: AgenticFlowOutputSchema,
   },
   async (input) => {
-    let executionAi = ai; // Use the default instance
-
     // If a specific API key is provided, create a temporary, isolated Genkit instance for this call.
     if (input.apiKey) {
-      executionAi = genkit({
+      const executionAi = genkit({
         plugins: [
           googleAI({
             apiKey: input.apiKey,
@@ -87,16 +85,36 @@ export const agenticFlow = ai.defineFlow(
         ],
         logLevel: 'silent', // We don't need to log these dynamic, per-request instances
       });
-    }
 
-    const promptToUse = executionAi.lookup('prompt', 'agenticPrompt');
-    if (!promptToUse) {
-      throw new Error('Agentic prompt not found');
-    }
-    
-    // We only pass the 'prompt' field to the actual prompt, not the api key.
-    const {output} = await promptToUse({ prompt: input.prompt });
+      // Define a temporary prompt within the scope of the temporary AI instance.
+      const tempPrompt = executionAi.definePrompt({
+        name: 'agenticPrompt_temp', // Different name to avoid conflicts
+        input: { schema: AgenticFlowInputSchema.pick({ prompt: true }) },
+        output: { schema: AgenticFlowOutputSchema },
+        prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE.
+Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
 
-    return output!;
+**Your Process:**
+1.  **Analyze:** Provide a detailed analysis of the user's request to understand their goal. Explain your reasoning and thought process.
+2.  **Plan:** Create a step-by-step plan consisting of file operations (write, edit, delete, etc.) and shell commands. Each step must have a clear 'purpose' and 'expectedOutcome'.
+3.  **Summarize:** Provide a comprehensive summary of the entire plan, including the total number of files changed, a breakdown of operation types (e.g., 2 writes, 1 delete), and the total operations to be performed.
+4.  **Suggest:** Offer a few relevant suggestions for what the user might want to do next.
+
+**User Request:**
+"{{{prompt}}}"
+
+Based on the request, generate a JSON object that strictly follows the output schema.
+Ensure all file paths are relative. For any new code, provide the complete file content.
+`,
+      });
+      
+      const { output } = await tempPrompt({ prompt: input.prompt });
+      return output!;
+
+    } else {
+      // Use the globally defined prompt if no specific key is provided.
+      const {output} = await agenticPrompt({ prompt: input.prompt });
+      return output!;
+    }
   }
 );
