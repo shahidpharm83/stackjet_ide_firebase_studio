@@ -262,7 +262,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
               <Bot className="w-12 h-12 mb-4 text-primary" />
               <h2 className="text-lg font-semibold">Agentic AI Assistant</h2>
               <p className="text-sm">
-                {project ? 'I can analyze your requests, create a plan, and execute it for you.' : 'Open a project to start a conversation.'}
+                I can analyze your requests, create a plan, and execute it for you.
               </p>
             </div>
           )}
@@ -296,9 +296,9 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       <div className="p-4 border-t border-border shrink-0">
         <form onSubmit={handleSubmit} className="relative">
           <Textarea
-            placeholder={!!project ? "Prompt Stacky to build, test, or refactor..." : "Open a project to use the AI Assistant."}
+            placeholder="Prompt Stacky to build, test, or refactor..."
             className="pr-20 min-h-[60px] resize-none"
-            disabled={!project || agentState !== 'idle'}
+            disabled={agentState !== 'idle'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -309,10 +309,10 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             }}
           />
           <div className="absolute top-1/2 right-3 -translate-y-1/2 flex items-center gap-1">
-            <Button variant="ghost" size="icon" disabled={!project || agentState !== 'idle'}>
+            <Button variant="ghost" size="icon" disabled={agentState !== 'idle'}>
               <Mic className="w-5 h-5" />
             </Button>
-            <Button type="submit" size="icon" disabled={!project || agentState !== 'idle' || !input.trim()}>
+            <Button type="submit" size="icon" disabled={agentState !== 'idle' || !input.trim()}>
               <Send className="w-5 h-5" />
             </Button>
           </div>
