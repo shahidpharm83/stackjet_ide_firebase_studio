@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
-  const getStorageKey = (projectName: string) => `chatHistory_${projectName}`;
+  const getStorageKey = useCallback((projectName: string) => `chatHistory_${projectName}`, []);
 
   useEffect(() => {
     if (project) {
@@ -54,7 +54,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     } else {
       setMessages([]);
     }
-  }, [project]);
+  }, [project, getStorageKey]);
 
   useEffect(() => {
     if (project && messages.length > 0) {
@@ -71,7 +71,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         console.error("Failed to remove messages from localStorage", error);
       }
     }
-  }, [messages, project]);
+  }, [messages, project, getStorageKey]);
 
 
   useEffect(() => {
@@ -82,44 +82,8 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
       }
     }
   }, [messages, agentState, executionProgress]);
-
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const userMessage: Message = { 
-      role: "user", 
-      content: input,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setAgentState("thinking");
-
-    try {
-      // Simulate thinking delay
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      setAgentState("analyzing");
-      
-      const result = await agenticFlow({ prompt: input });
-
-      const assistantMessage: Message = { role: "assistant", content: result };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setAgentState("planning");
-
-    } catch (error) {
-      console.error("AI Agent error:", error);
-      const errorMessage: Message = {
-        role: "assistant",
-        content: "Sorry, I encountered an error and couldn't complete your request.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      setAgentState("error");
-    }
-  };
-
-  const handleStartExecution = (plan: AgenticFlowOutput['plan']) => {
+  
+  const handleStartExecution = useCallback((plan: AgenticFlowOutput['plan']) => {
     setAgentState("executing");
     setExecutionProgress(0);
     setExecutedSteps(0);
@@ -136,7 +100,48 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
             return nextStep;
         });
     }, 800);
-  };
+  }, []);
+
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userMessage: Message = { 
+      role: "user", 
+      content: input,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
+    setInput("");
+    setAgentState("thinking");
+
+    try {
+      // Simulate thinking delay
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      setAgentState("analyzing");
+      
+      const result = await agenticFlow({ prompt: currentInput });
+
+      const assistantMessage: Message = { role: "assistant", content: result };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setAgentState("planning");
+      
+      // Automatically start execution after a brief delay to show the plan
+      setTimeout(() => handleStartExecution(result.plan), 1000);
+
+    } catch (error) {
+      console.error("AI Agent error:", error);
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Sorry, I encountered an error and couldn't complete your request.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setAgentState("error");
+    }
+  }, [input, handleStartExecution]);
+
   
   const renderStepIcon = (action: string) => {
     switch (action) {
@@ -145,6 +150,11 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
         return <Pencil className="w-4 h-4 text-blue-400" />;
       case 'read':
         return <File className="w-4 h-4 text-gray-400" />;
+      case 'delete':
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      case 'rename':
+      case 'move':
+        return <ChevronsRight className="w-4 h-4 text-yellow-400" />;
       case 'command':
         return <Terminal className="w-4 h-4 text-green-400" />;
       default:
@@ -152,7 +162,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }
   };
 
-  const AgentResponse = ({ response, setInput }: { response: AgenticFlowOutput; setInput: (value: string) => void }) => {
+  const AgentResponse = ({ response }: { response: AgenticFlowOutput }) => {
     const totalSteps = response.plan.length;
     const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing';
     const successfulSteps = agentState === 'summarizing' ? totalSteps : executedSteps;
@@ -194,12 +204,6 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
                 ))}
               </div>
             </div>
-
-            {agentState === "planning" && (
-                <Button onClick={() => handleStartExecution(response.plan)} className="w-full">
-                    <Play className="mr-2" /> Start Execution
-                </Button>
-            )}
 
             {(agentState === 'executing' || agentState === 'summarizing') && (
                 <div className="space-y-2 pt-2">
@@ -252,7 +256,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           </div>
         )
     }
-    return <AgentResponse response={message.content} setInput={setInput} />;
+    return <AgentResponse response={message.content} />;
   };
 
   const getAgentStatus = () => {
