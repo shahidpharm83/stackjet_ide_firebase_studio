@@ -130,6 +130,10 @@ export default function Home() {
         alert('Your browser does not support the File System Access API.');
       }
     } catch (error: any) {
+        // Silently ignore AbortError which occurs when the user cancels the dialog
+        if (error.name === 'AbortError') {
+            return;
+        }
       if (error.name === 'SecurityError') {
         alert('Opening a local folder is not allowed in this environment for security reasons. Please try running the app outside of an iframe.');
       } else {
