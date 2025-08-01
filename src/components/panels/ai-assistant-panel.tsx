@@ -16,6 +16,7 @@ import type { Project, OpenFile } from '@/app/page';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { FileSystemTreeItem } from "@/components/panels/file-explorer";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 
 type PlanStep = AgenticFlowOutput['plan'][0];
@@ -52,6 +53,7 @@ type Message = {
   summaryComplete?: boolean;
   isAwaitingExecution?: boolean;
   uploadedFile?: UploadedFile;
+  currentStep?: number;
 };
 
 type AgentState = "idle" | "thinking" | "executing" | "summarizing" | "error" | "awaiting_execution";
@@ -231,9 +233,13 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     ));
     
     const allSteps: ExecutedStep[] = [];
-    for (const step of plan) {
+    for (const [i, step] of plan.entries()) {
         const stepStartTime = Date.now();
         let stepResult: { status: 'success' | 'error'; outcome: string };
+
+        setMessages(prev => prev.map((msg, idx) => 
+            idx === messageIndex ? { ...msg, currentStep: i } : msg
+        ));
 
         try {
             if ('action' in step) { // It's a file operation
@@ -390,6 +396,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             return {
                 ...msg,
                 isExecuting: false,
+                currentStep: undefined,
                 summaryComplete: true, 
                 timings: {
                     ...(msg.timings || { start: Date.now() }),
@@ -712,6 +719,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     const executionProgress = totalSteps > 0 ? (executedPlan.length / totalSteps) * 100 : 0;
     const timings = message.timings;
     const isDone = message.summaryComplete;
+    const currentStepIndex = message.currentStep;
     
     const totalTime = timings?.summaryEnd && timings?.start ? timings.summaryEnd - timings.start : 0;
 
@@ -747,10 +755,19 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
               <div className="space-y-2">
                 {plan.map((step, idx) => {
                   const action = 'action' in step ? step.action : 'command';
+                  const isCurrentStep = isExecuting && currentStepIndex === idx;
                   return (
-                    <div key={idx} className="p-3 rounded-md text-sm bg-muted/50 border-l-4 border-transparent">
+                    <div 
+                        key={idx} 
+                        className={cn(
+                            "p-3 rounded-md text-sm bg-muted/50 border-l-4 transition-all duration-300",
+                            isCurrentStep ? 'border-primary bg-primary/10' : 'border-transparent'
+                        )}
+                    >
                       <div className="flex items-center gap-3 mb-1">
-                        <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">{idx + 1}</div>
+                        <div className="w-4 h-4 flex items-center justify-center text-muted-foreground font-mono text-xs">
+                            {isCurrentStep ? <CircleDashed className="animate-spin text-primary" /> : idx + 1}
+                        </div>
                         {renderStepIcon(action)}
                         <span className="font-mono text-xs flex-1 truncate">{ 'fileName' in step ? step.fileName : step.command }</span>
                         <Badge variant="outline" className="text-xs capitalize">{action}</Badge>
@@ -828,7 +845,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     </div>
                     <AlertDescription>
                         {response.summary}
-                         <div className="flex items-center gap-4 mt-2 text-xs">
+                         <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs">
                            <span><strong className="text-foreground">{executedPlan.filter(s => s.status === 'success').length}</strong> successful steps</span>
                            <span><strong className="text-foreground">{executedPlan.filter(s => s.status === 'error').length}</strong> errors</span>
                            {timings?.executionEnd && timings.executionStart && (
@@ -841,10 +858,10 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     </AlertDescription>
                 </Alert>
                 
-                <div className="space-y-2 pt-4 w-[95%]">
+                <div className="space-y-2 pt-4">
                     <h4 className="font-semibold text-sm">Suggestions</h4>
                     <div className="flex flex-col items-start gap-2">
-                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
+                        {response.suggestions.map((s,i) => <Button key={i} variant="outline" size="sm" className="w-full justify-start text-left h-auto" onClick={() => { sendPrompt(s); }}>{s}</Button>)}
                     </div>
                      <div className="pt-2">
                         <Button variant="default" size="sm" onClick={() => handleDownloadPatch(plan)}>
@@ -1002,5 +1019,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    
