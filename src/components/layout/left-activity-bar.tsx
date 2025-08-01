@@ -24,7 +24,7 @@ export default function LeftActivityBar({ onToggle, activePanel, setActivePanel 
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={cn("h-8 w-8", activePanel === "files" && "bg-accent text-accent-foreground")}
+                    className={cn("h-8 w-8", activePanel === "files" ? "bg-accent text-accent-foreground" : "")}
                     onClick={() => setActivePanel("files")}
                 >
                   <File className="w-5 h-5" />
@@ -39,7 +39,7 @@ export default function LeftActivityBar({ onToggle, activePanel, setActivePanel 
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className={cn("h-8 w-8", activePanel === "ai" && "bg-accent text-accent-foreground")}
+                    className={cn("h-8 w-8", activePanel === "ai" ? "bg-accent text-accent-foreground" : "")}
                     onClick={() => setActivePanel("ai")}
                 >
                   <Bot className="w-5 h-5" />
@@ -64,5 +64,3 @@ export default function LeftActivityBar({ onToggle, activePanel, setActivePanel 
     </TooltipProvider>
   );
 }
-
-    

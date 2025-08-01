@@ -10,7 +10,7 @@ import PreviewPanel from "@/components/panels/preview-panel";
 import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
-import { File, Bot } from "lucide-react";
+import { File, Bot, Loader } from "lucide-react";
 import TerminalPanel from "@/components/panels/terminal-panel";
 import {
   PanelGroup,
@@ -247,6 +247,14 @@ export default function Home() {
         setIsExecuting(false);
     }
   };
+  
+  if (!hydrated) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">
+        <Loader className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground font-sans text-sm">
@@ -267,7 +275,7 @@ export default function Home() {
             setActivePanel={setActiveLeftPanel}
         />
         <PanelGroup direction="horizontal" className="flex-1">
-          {hydrated && leftPanelVisible && (
+          {leftPanelVisible && (
             <>
               <Panel defaultSize={20} minSize={15} className="flex flex-col">
                 {activeLeftPanel === 'files' && (
@@ -302,7 +310,7 @@ export default function Home() {
                   hydrated={hydrated}
                 />
               </Panel>
-              {hydrated && isTerminalOpen && (
+              {isTerminalOpen && (
                 <>
                   <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors" />
                   <Panel defaultSize={25} minSize={10}>
@@ -312,7 +320,7 @@ export default function Home() {
               )}
             </PanelGroup>
           </Panel>
-          {hydrated && rightPanelVisible && (
+          {rightPanelVisible && (
             <>
               <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
               <Panel defaultSize={30} minSize={15}>
@@ -327,5 +335,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
