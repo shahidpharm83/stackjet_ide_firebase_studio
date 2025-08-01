@@ -8,8 +8,8 @@ type TerminalPanelProps = {
 
 export default function TerminalPanel({ projectOpen }: TerminalPanelProps) {
   return (
-    <div className="h-48 flex-shrink-0 flex flex-col border-t border-border">
-        <div className="flex items-center justify-between p-2 h-12 border-b border-border">
+    <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between p-2 h-12 border-b border-border shrink-0">
             <div className="flex items-center gap-2">
                 <Terminal className="w-5 h-5" />
                 <h2 className="font-semibold text-base">Terminal</h2>

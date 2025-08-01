@@ -98,7 +98,7 @@ export default function AiAssistantPanel() {
                    <span className="text-green-500 ml-auto">SUCCESS</span>
                 </div>
                 {/* Reusable Terminal */}
-                <div className="bg-black/50 rounded-lg p-3 text-xs">
+                <div className="bg-black/50 rounded-lg p-3 text-xs overflow-x-auto">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <ChevronRight className="w-3 h-3"/>
                     <span>Running shell command...</span>
@@ -142,7 +142,7 @@ export default function AiAssistantPanel() {
           </div>
         </div>
       </ScrollArea>
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border shrink-0">
         <div className="relative">
           <Textarea
             placeholder={projectOpen ? "Type your prompt here..." : "Open a project to use the AI Assistant."}

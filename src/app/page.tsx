@@ -10,7 +10,7 @@ import StatusBar from "@/components/layout/status-bar";
 import LeftActivityBar from "@/components/layout/left-activity-bar";
 import RightActivityBar from "@/components/layout/right-activity-bar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { File, Bot, Eye } from "lucide-react";
+import { File, Bot } from "lucide-react";
 import TerminalPanel from "@/components/panels/terminal-panel";
 import {
   PanelGroup,
@@ -65,36 +65,38 @@ export default function Home() {
       <Header project={project} onCloseProject={handleCloseProject} onOpenFolder={handleOpenFolder} />
       <div className="flex flex-1 overflow-hidden">
         <LeftActivityBar onToggle={() => setLeftPanelVisible(!leftPanelVisible)} />
-        <PanelGroup direction="horizontal">
+        <PanelGroup direction="horizontal" className="flex-1">
           {leftPanelVisible && (
-            <Panel defaultSize={20} minSize={15}>
-              <Tabs defaultValue="files" className="h-full flex flex-col">
-                <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b">
-                  <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
-                    <File className="w-4 h-4 mr-2" />
-                    Files
-                  </TabsTrigger>
-                  <TabsTrigger value="ai" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
-                      <Bot className="w-4 h-4 mr-2" />
-                    AI Assistant
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="files" className="flex-1 overflow-y-auto">
-                  <FileExplorer 
-                    project={project} 
-                    onOpenFolder={handleOpenFolder} 
-                  />
-                </TabsContent>
-                <TabsContent value="ai" className="flex-1">
-                  <AiAssistantPanel />
-                </TabsContent>
-              </Tabs>
-            </Panel>
+            <>
+              <Panel defaultSize={20} minSize={15} className="flex flex-col">
+                <Tabs defaultValue="files" className="h-full flex flex-col">
+                  <TabsList className="grid w-full grid-cols-2 rounded-none p-0 h-12 border-b shrink-0">
+                    <TabsTrigger value="files" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
+                      <File className="w-4 h-4 mr-2" />
+                      Files
+                    </TabsTrigger>
+                    <TabsTrigger value="ai" className="rounded-none h-full text-muted-foreground data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-none">
+                        <Bot className="w-4 h-4 mr-2" />
+                      AI Assistant
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="files" className="flex-1 overflow-y-auto">
+                    <FileExplorer 
+                      project={project} 
+                      onOpenFolder={handleOpenFolder} 
+                    />
+                  </TabsContent>
+                  <TabsContent value="ai" className="flex-1 overflow-hidden">
+                    <AiAssistantPanel />
+                  </TabsContent>
+                </Tabs>
+              </Panel>
+              <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
+            </>
           )}
-          <PanelResizeHandle className="w-1 bg-border hover:bg-primary transition-colors" />
           <Panel>
             <PanelGroup direction="vertical">
-              <Panel>
+              <Panel className="flex-1">
                 <MainPanel projectOpen={!!project} />
               </Panel>
               {isTerminalOpen && (

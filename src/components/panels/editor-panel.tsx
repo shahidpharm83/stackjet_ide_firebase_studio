@@ -83,7 +83,7 @@ export default function EditorPanel({ projectOpen }: EditorPanelProps) {
       ) : (
         <>
           <div className="flex-shrink-0 p-2 border-b border-border flex items-center justify-between h-12">
-            <span className="font-medium text-foreground">index.js</span>
+            <span className="font-medium text-foreground truncate">index.js</span>
             <div className="flex items-center gap-2">
                 <Badge variant="secondary">JavaScript</Badge>
                 <Badge variant="destructive">1 Error</Badge>
