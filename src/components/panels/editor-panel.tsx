@@ -38,14 +38,14 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
   const lineCount = file.content.split('\n').length;
 
   return (
-    <div className="flex-1 h-full flex font-code text-sm">
+    <div className="flex-1 h-full flex font-code text-sm bg-background">
       <div 
         ref={lineNumbersRef} 
-        className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background py-4"
+        className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background"
         style={{ lineHeight: '1.5rem', overflow: 'hidden' }}
       >
         {Array.from({ length: lineCount }, (_, i) => (
-          <div key={i}>{i + 1}</div>
+          <div key={i} className="py-2">{i + 1}</div>
         ))}
       </div>
       <Textarea
@@ -53,8 +53,8 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
         value={file.content}
         onChange={(e) => onContentChange(e.target.value)}
         readOnly={isExecuting}
-        className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6"
-        style={{ lineHeight: '1.5rem' }}
+        className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6 bg-transparent"
+        style={{ lineHeight: '1.5rem', padding: '8px 0' }}
         placeholder="Start typing..."
       />
     </div>

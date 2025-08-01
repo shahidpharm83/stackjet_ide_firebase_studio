@@ -94,6 +94,7 @@ An image has been provided. Analyze it carefully to inform your plan. For exampl
 
 Based on the request, generate a JSON object that strictly follows the output schema.
 Ensure all file paths are relative. For any new code, provide the complete file content.
+Crucially, the 'content' field for file operations must contain only the raw code, without any markdown formatting like \`\`\`javascript or \`\`\`.
 `,
 });
 
@@ -162,6 +163,7 @@ An image has been provided. Analyze it carefully to inform your plan. For exampl
 
 Based on the request, generate a JSON object that strictly follows the output schema.
 Ensure all file paths are relative. For any new code, provide the complete file content.
+Crucially, the 'content' field for file operations must contain only the raw code, without any markdown formatting like \`\`\`javascript or \`\`\`.
 `,
       });
       
