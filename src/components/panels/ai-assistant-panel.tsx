@@ -152,7 +152,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
     }
   };
 
-  const AgentResponse = ({ response }: { response: AgenticFlowOutput }) => {
+  const AgentResponse = ({ response, setInput }: { response: AgenticFlowOutput; setInput: (value: string) => void }) => {
     const totalSteps = response.plan.length;
     const isExecutingOrDone = agentState === 'executing' || agentState === 'summarizing';
     const successfulSteps = agentState === 'summarizing' ? totalSteps : executedSteps;
@@ -252,7 +252,7 @@ export default function AiAssistantPanel({ project }: AiAssistantPanelProps) {
           </div>
         )
     }
-    return <AgentResponse response={message.content} />;
+    return <AgentResponse response={message.content} setInput={setInput} />;
   };
 
   const getAgentStatus = () => {
