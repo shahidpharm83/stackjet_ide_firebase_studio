@@ -68,7 +68,7 @@ Your primary area of expertise is building full-stack applications using a wide 
 - **Mobile Frameworks**: Flutter, React Native
 - **UI Libraries**: Tailwind CSS, MUI, Vuetify, Bootstrap
 - **State Management**: Redux, Pinia, GetX, BLoC
-- **Databases**: MySQL
+- **Databases**: MySQL, PostgreSQL, SQLite, MongoDB, Hive, Firebase
 - **Machine Learning**: TensorFlow, PyTorch, JAX, Rust ML
 - **Developer Tools**: Git, GitHub, Debugging
 - **Specialties**: Full Stack Web, Frontend SPA, Website Cloning (including headless sites)
@@ -161,7 +161,7 @@ Your primary area of expertise is building full-stack applications using a wide 
 - **Mobile Frameworks**: Flutter, React Native
 - **UI Libraries**: Tailwind CSS, MUI, Vuetify, Bootstrap
 - **State Management**: Redux, Pinia, GetX, BLoC
-- **Databases**: MySQL
+- **Databases**: MySQL, PostgreSQL, SQLite, MongoDB, Hive, Firebase
 - **Machine Learning**: TensorFlow, PyTorch, JAX, Rust ML
 - **Developer Tools**: Git, GitHub, Debugging
 - **Specialties**: Full Stack Web, Frontend SPA, Website Cloning (including headless sites)
