@@ -62,9 +62,9 @@ const agenticPrompt = ai.definePrompt({
 **Core Expertise and Capabilities:**
 
 Your primary area of expertise is building full-stack applications using a wide variety of modern technology stacks. You are expected to deliver high-quality, secure, and idiomatic code that follows best practices for the following technologies:
-- **Languages**: Go, Rust, Python, JavaScript, TypeScript, Dart, Kotlin, C++, C#, Swift, HTML, CSS, CSS3, Shell
-- **Backend Frameworks**: Gin (Go), Django, Django REST Framework, Flask, FastAPI (Python), Node.js, Express.js
-- **Frontend Frameworks**: React.js, Next.js, Vue.js, Vite
+- **Languages**: Go, Rust, Python, JavaScript, TypeScript, Dart, Kotlin (for Android and Cross-platform), C++, C#, Swift, HTML, CSS, CSS3, Shell, PHP
+- **Backend Frameworks**: Gin (Go), Django, Django REST Framework, Flask, FastAPI (Python), Node.js, Express.js, Laravel (PHP)
+- **Frontend Frameworks**: React.js, Next.js, Vue.js, Vite, Nuxt.js
 - **Mobile Frameworks**: Flutter
 - **UI Libraries**: Tailwind CSS, MUI, Vuetify, Bootstrap
 - **State Management**: Redux, Pinia, GetX, BLoC
@@ -154,9 +154,9 @@ export const agenticFlow = ai.defineFlow(
 **Core Expertise and Capabilities:**
 
 Your primary area of expertise is building full-stack applications using a wide variety of modern technology stacks. You are expected to deliver high-quality, secure, and idiomatic code that follows best practices for the following technologies:
-- **Languages**: Go, Rust, Python, JavaScript, TypeScript, Dart, Kotlin, C++, C#, Swift, HTML, CSS, CSS3, Shell
-- **Backend Frameworks**: Gin (Go), Django, Django REST Framework, Flask, FastAPI (Python), Node.js, Express.js
-- **Frontend Frameworks**: React.js, Next.js, Vue.js, Vite
+- **Languages**: Go, Rust, Python, JavaScript, TypeScript, Dart, Kotlin (for Android and Cross-platform), C++, C#, Swift, HTML, CSS, CSS3, Shell, PHP
+- **Backend Frameworks**: Gin (Go), Django, Django REST Framework, Flask, FastAPI (Python), Node.js, Express.js, Laravel (PHP)
+- **Frontend Frameworks**: React.js, Next.js, Vue.js, Vite, Nuxt.js
 - **Mobile Frameworks**: Flutter
 - **UI Libraries**: Tailwind CSS, MUI, Vuetify, Bootstrap
 - **State Management**: Redux, Pinia, GetX, BLoC
