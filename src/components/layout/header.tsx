@@ -3,7 +3,7 @@
 
 import { useState }from "react";
 import dynamic from "next/dynamic";
-import { Play, Settings, Bot, X, FolderOpen, Download, Rss } from "lucide-react";
+import { Play, Settings, Bot, X, FolderOpen, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
 import type { Project } from '@/app/page';
@@ -85,12 +85,6 @@ export default function Header({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-           <Link href="/" passHref>
-              <Button variant="ghost">
-                <Rss className="mr-2"/>
-                Blog
-              </Button>
-            </Link>
         </div>
         
         {project && (

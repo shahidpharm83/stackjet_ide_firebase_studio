@@ -23,7 +23,7 @@ type MainPanelProps = {
   onFileContentChange: (path: string, newContent: string) => void;
   isExecuting: boolean;
   projectOpen: boolean;
-  activeMainView: MainView;
+  activeMainView: MainView | string;
   onViewChange: (view: MainView | string) => void;
 };
 
@@ -50,16 +50,17 @@ export default function MainPanel({
 
   if (!projectOpen) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full bg-background">
         <Code className="w-16 h-16 mb-4" />
         <p>Open a project to start working.</p>
+        <p className="text-xs mt-1">Use the File menu to open an existing folder or create a new project.</p>
       </div>
     );
   }
 
   if (!hydrated) {
     return (
-       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
+       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full bg-background">
           <Code className="w-16 h-16 mb-4 animate-pulse" />
           <p>Loading Editor...</p>
         </div>
@@ -101,7 +102,7 @@ export default function MainPanel({
                   <Panel>
                     {activeMainView === 'editor' && (
                         noFilesOpen ? (
-                             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
+                             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full bg-background">
                                 <Code className="w-16 h-16 mb-4" />
                                 <p>No files are open.</p>
                                 <p className="text-xs">Select a file from the explorer to begin editing.</p>
