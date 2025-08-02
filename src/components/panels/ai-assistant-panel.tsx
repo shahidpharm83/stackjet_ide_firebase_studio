@@ -652,7 +652,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       sendPrompt(input);
     }
     
-    if (fileSearch.active && fileSearch.results.length > 0 && e.key === 'Tab') {
+    if (fileSearch.active && fileSearch.results.length > 0 && (e.key === 'Tab' || e.key === 'Enter')) {
         e.preventDefault();
         handleFileSelect(fileSearch.results[0]);
     }
@@ -972,11 +972,14 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-6">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center">
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center p-8 gap-2">
               <Bot className="w-12 h-12 text-primary" />
               <h2 className="text-lg font-semibold">Agentic AI Assistant</h2>
-              <p className="text-sm">
-                I can analyze your requests, create a plan, and execute it for you.
+              <p className="text-sm max-w-sm">
+                I can analyze your requests, create a plan, and execute it for you. Try asking me to create a new component or add a feature!
+              </p>
+               <p className="text-xs max-w-sm text-muted-foreground/80">
+                You can mention files by typing "@" or drag-and-drop an image to give me more context.
               </p>
             </div>
           )}
@@ -1060,7 +1063,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <div className="p-2 font-semibold text-sm border-b">Mention a file</div>
-            <div className="max-h-60 overflow-y-auto">
+            <ScrollArea className="max-h-60">
               {fileSearch.results.length > 0 ? (
                 fileSearch.results.map(file => (
                   <div 
@@ -1074,7 +1077,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
               ) : (
                 <div className="p-4 text-center text-sm text-muted-foreground">No files found.</div>
               )}
-            </div>
+            </ScrollArea>
           </PopoverContent>
         </Popover>
       </div>
