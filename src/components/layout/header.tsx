@@ -3,7 +3,7 @@
 
 import { useState }from "react";
 import dynamic from "next/dynamic";
-import { Play, Settings, Bot, X, FolderOpen, Download } from "lucide-react";
+import { Play, Settings, Bot, X, FolderOpen, Download, Rss } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
 import type { Project } from '@/app/page';
@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useTerminal } from "@/contexts/terminal-context";
+import Link from "next/link";
 
 const ProjectModal = dynamic(() => import('@/components/modals/project-modal'), {
   ssr: false,
@@ -54,8 +55,10 @@ export default function Header({
       <header className="flex h-12 items-center justify-between px-4 shrink-0 border-b">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-primary" />
-            <h1 className="text-lg font-bold">Stackjet IDE</h1>
+            <Link href="/" className="flex items-center gap-2">
+              <Bot className="w-6 h-6 text-primary" />
+              <h1 className="text-lg font-bold">Stackjet IDE</h1>
+            </Link>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -82,6 +85,12 @@ export default function Header({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+           <Link href="/" passHref>
+              <Button variant="ghost">
+                <Rss className="mr-2"/>
+                Blog
+              </Button>
+            </Link>
         </div>
         
         {project && (
