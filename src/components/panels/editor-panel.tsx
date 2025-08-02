@@ -14,6 +14,8 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeLine, setActiveLine] = useState(-1);
+  const activeLineRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     const syncScroll = () => {
@@ -38,6 +40,13 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
     }
   }, [file?.content, isExecuting, file]);
 
+  useEffect(() => {
+    if (activeLineRef.current && textareaRef.current && lineNumbersRef.current) {
+        activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [activeLine]);
+
+
   if (!file) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground h-full">
@@ -50,24 +59,25 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
 
   return (
     <div className="flex-1 h-full flex font-code text-sm bg-background">
-      <div 
-        ref={lineNumbersRef} 
-        className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background pt-[9px] pb-[9px]"
-        style={{ lineHeight: '1.5rem', overflow: 'hidden' }}
-      >
-        {Array.from({ length: lineCount }, (_, i) => (
-          <div 
-            key={i} 
-            className={cn(
-              "relative", 
-              isExecuting && i + 1 === activeLine ? "wavy-underline-editor" : ""
-            )}
-          >
-            {i + 1}
-          </div>
-        ))}
-      </div>
-      <Textarea
+      <ScrollArea className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background pt-[9px] pb-[9px]" ref={lineNumbersRef}>
+        {Array.from({ length: lineCount }, (_, i) => {
+          const isCurrentActiveLine = isExecuting && (i + 1 === activeLine);
+          return (
+              <div 
+                key={i} 
+                ref={isCurrentActiveLine ? activeLineRef : null}
+                className={cn(
+                  "relative", 
+                  isCurrentActiveLine ? "wavy-underline-editor" : ""
+                )}
+                style={{ lineHeight: '1.5rem' }}
+              >
+                {i + 1}
+              </div>
+          )
+        })}
+      </ScrollArea>
+       <Textarea
         ref={textareaRef}
         value={file.content}
         onChange={(e) => onContentChange(e.target.value)}
