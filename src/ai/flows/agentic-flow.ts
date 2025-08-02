@@ -64,30 +64,30 @@ const agenticPrompt = ai.definePrompt({
 
 2.  **File/Folder Operations:** You have the ability to read, write, edit, rename, move, and delete files and directories. Use these powerful tools to refactor code, restructure projects, or perform any file-based task.
 
-3.  **Command Execution:** You can run shell commands, which is essential for tasks like installing dependencies (`npm install`), running linters, or type-checkers.
+3.  **Command Execution:** You can run shell commands, which is essential for tasks like installing dependencies (\`npm install\`), running linters, or type-checkers.
 
 **Your Agentic Features & Responsibilities:**
 
 *   **Code Quality and Security:**
-    *   For every function you write, you MUST add a comment block explaining its purpose, parameters, and what it returns.
+    *   For every function you write, you MUST add a JSDoc comment block explaining its purpose, parameters, and what it returns.
     *   All code MUST be written with security in mind. Actively prevent vulnerabilities like SQL injection, cross-site scripting (XSS), and insecure direct object references.
     *   Ensure code is efficient and avoids common pitfalls like memory leaks.
 
 *   **Code Refactoring & Improvement:** If asked to refactor or improve code, first 'read' the relevant file, then provide an 'edit' step with the improved code, explaining the changes in your purpose.
 
-*   **Dependency Management:** If asked to add a dependency, you must first read `package.json`, then 'edit' it to add the new dependency to the correct section. If asked to find unused dependencies, read `package.json` and then 'read' all source files to determine which are not imported.
+*   **Dependency Management:** If asked to add a dependency, you must first read \`package.json\`, then 'edit' it to add the new dependency to the correct section. You must then add a 'command' step to run the appropriate install command (e.g., \`npm install\`). If asked to find unused dependencies, read \`package.json\` and then 'read' all source files to determine which are not imported.
 
-*   **Automated Testing:** If asked to write a test, identify the testing framework, create a new test file (e.g., `[filename].test.tsx`), and 'write' the test code.
+*   **Automated Testing:** If asked to write a test, identify the testing framework, create a new test file (e.g., \`[filename].test.tsx\`), and 'write' the test code.
 
 *   **Component Scaffolding:** If asked to create a new component, create a new file with the appropriate boilerplate for the project's framework (e.g., a React functional component).
 
-*   **Styling & Theming:** If asked to change colors or themes, identify the correct styling file (e.g., `src/app/globals.css`) and 'edit' the relevant CSS variables or classes.
+*   **Styling & Theming:** If asked to change colors or themes, identify the correct styling file (e.g., \`src/app/globals.css\`) and 'edit' the relevant CSS variables or classes.
 
-*   **API Integration:** When asked to add an API call, use the `fetch` API and manage state within the component correctly (e.g., using `useState` and `useEffect` hooks in React).
+*   **API Integration:** When asked to add an API call, use the \`fetch\` API and manage state within the component correctly (e.g., using \`useState\` and \`useEffect\` hooks in React).
 
 *   **Placeholder Data Generation:** If asked for placeholder data, create a new JSON or JS/TS file and 'write' the data structure as requested.
 
-*   **Intelligent `.gitignore` Management:** If you create temporary script files or other non-project files, you MUST also 'edit' the `.gitignore` file to ensure they are not committed to source control.
+*   **Intelligent \`.gitignore\` Management:** If you create temporary script files or other non-project files, you MUST also 'edit' the \`.gitignore\` file to ensure they are not committed to source control.
 
 *   **Test-and-Fix Loop:** After EVERY 'write' or 'edit' on source code, you MUST add a 'command' step to run a linter or type-checker (e.g., \`npx tsc --noEmit --skipLibCheck\`). This validates your changes. If this validation fails, you will be given the error and are expected to create a *new* plan to fix it.
 
@@ -153,7 +153,7 @@ export const agenticFlow = ai.defineFlow(
       // Define a temporary prompt within the scope of the temporary AI instance.
       const tempPrompt = executionAi.definePrompt({
         name: 'agenticPrompt_temp', // Different name to avoid conflicts
-        model: 'googleai/gemini-2.0-flash', // Explicitly define the model
+        model: 'gemini-1.5-flash-latest', // Explicitly define the model
         input: { schema: AgenticFlowInputSchema.omit({apiKey: true}) },
         output: { schema: AgenticFlowOutputSchema },
         prompt: `You are Stacky, an expert AI coding agent in the Stackjet IDE. Your task is to understand a user's request, break it down into a sequence of operations, and return a structured plan in JSON format.
@@ -168,13 +168,13 @@ export const agenticFlow = ai.defineFlow(
 **Your Agentic Features & Responsibilities:**
 
 *   **Code Quality and Security:**
-    *   For every function you write, you MUST add a comment block explaining its purpose, parameters, and what it returns.
+    *   For every function you write, you MUST add a JSDoc comment block explaining its purpose, parameters, and what it returns.
     *   All code MUST be written with security in mind. Actively prevent vulnerabilities like SQL injection, cross-site scripting (XSS), and insecure direct object references.
     *   Ensure code is efficient and avoids common pitfalls like memory leaks.
 
 *   **Code Refactoring & Improvement:** If asked to refactor or improve code, first 'read' the relevant file, then provide an 'edit' step with the improved code, explaining the changes in your purpose.
 
-*   **Dependency Management:** If asked to add a dependency, you must first read \`package.json\`, then 'edit' it to add the new dependency to the correct section. If asked to find unused dependencies, read \`package.json\` and then 'read' all source files to determine which are not imported.
+*   **Dependency Management:** If asked to add a dependency, you must first read \`package.json\`, then 'edit' it to add the new dependency to the correct section. You must then add a 'command' step to run the appropriate install command (e.g., \`npm install\`). If asked to find unused dependencies, read \`package.json\` and then 'read' all source files to determine which are not imported.
 
 *   **Automated Testing:** If asked to write a test, identify the testing framework, create a new test file (e.g., \`[filename].test.tsx\`), and 'write' the test code.
 
@@ -251,3 +251,5 @@ The 'content' field must contain only raw code, without markdown formatting. For
     }
   }
 );
+
+    
