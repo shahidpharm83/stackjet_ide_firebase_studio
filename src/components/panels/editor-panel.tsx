@@ -14,32 +14,21 @@ type EditorPanelProps = {
 export default function EditorPanel({ file, onContentChange, isExecuting }: EditorPanelProps) {
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
+
   const [activeLine, setActiveLine] = useState(-1);
   const activeLineRef = useRef<HTMLDivElement>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const wasExecutingRef = useRef(false);
+  const [scrollTop, setScrollTop] = useState(0);
 
   useEffect(() => {
-    const syncScroll = () => {
-      if (lineNumbersRef.current && textareaRef.current) {
-        lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
-      }
-    };
-
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.addEventListener('scroll', syncScroll);
-      return () => textarea.removeEventListener('scroll', syncScroll);
+    if (wasExecutingRef.current && !isExecuting) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => setIsAnimating(false), 500); // Animation duration
+      return () => clearTimeout(timer);
     }
-  }, []);
-  
-  useEffect(() => {
-      if (wasExecutingRef.current && !isExecuting) {
-          setIsAnimating(true);
-          const timer = setTimeout(() => setIsAnimating(false), 500); // Animation duration
-          return () => clearTimeout(timer);
-      }
-      wasExecutingRef.current = isExecuting;
+    wasExecutingRef.current = isExecuting;
   }, [isExecuting]);
 
   useEffect(() => {
@@ -52,11 +41,16 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
   }, [file?.content, isExecuting, file]);
 
   useEffect(() => {
-    if (activeLineRef.current && textareaRef.current && lineNumbersRef.current) {
+    if (activeLineRef.current) {
         activeLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [activeLine]);
-
+  
+  useEffect(() => {
+    if (lineNumbersRef.current) {
+      lineNumbersRef.current.scrollTop = scrollTop;
+    }
+  }, [scrollTop]);
 
   if (!file) {
     return (
@@ -67,10 +61,13 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
   }
 
   const lineCount = file.content.split('\n').length;
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
 
   return (
     <div className={cn("flex-1 h-full flex font-code text-sm bg-background", isAnimating && "animate-line-shuffle")}>
-      <ScrollArea className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background pt-[9px] pb-[9px]" ref={lineNumbersRef}>
+       <div ref={lineNumbersRef} className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background pt-[9px] pb-[9px] overflow-hidden">
         {Array.from({ length: lineCount }, (_, i) => {
           const isCurrentActiveLine = isExecuting && (i + 1 === activeLine);
           return (
@@ -78,23 +75,29 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
                 key={i} 
                 ref={isCurrentActiveLine ? activeLineRef : null}
                 className="relative flex items-center justify-end"
-                style={{ lineHeight: '1.5rem' }}
+                style={{ lineHeight: '1.5rem', height: '1.5rem' }}
               >
                  {isCurrentActiveLine && <Pencil className="w-3 h-3 mr-1 text-primary animate-pulse" />}
                 {i + 1}
               </div>
           )
         })}
-      </ScrollArea>
-       <Textarea
-        ref={textareaRef}
-        value={file.content}
-        onChange={(e) => onContentChange(e.target.value)}
-        readOnly={isExecuting}
-        className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6 bg-transparent"
-        style={{ lineHeight: '1.5rem', paddingTop: '9px', paddingBottom: '9px' }}
-        placeholder="Start typing..."
-      />
+      </div>
+       <ScrollArea 
+         className="flex-1" 
+         viewportRef={scrollViewportRef} 
+         onScroll={handleScroll}
+       >
+        <Textarea
+          ref={textareaRef}
+          value={file.content}
+          onChange={(e) => onContentChange(e.target.value)}
+          readOnly={isExecuting}
+          className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6 bg-transparent h-full whitespace-nowrap"
+          style={{ lineHeight: '1.5rem', paddingTop: '9px', paddingBottom: '9px' }}
+          placeholder="Start typing..."
+        />
+       </ScrollArea>
     </div>
   );
 }
