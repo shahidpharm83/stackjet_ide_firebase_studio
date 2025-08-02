@@ -63,7 +63,7 @@ type AiAssistantPanelProps = {
   onOpenFile: (path: string, handle: FileSystemFileHandle, content?: string) => void;
   onFileContentChange: (path: string, newContent: string) => void;
   getOpenFile: (path: string) => OpenFile | undefined;
-  setActiveMainView: (view: MainView) => void;
+  setActiveMainView: (view: MainView | string) => void;
 };
 
 type ApiKey = {
