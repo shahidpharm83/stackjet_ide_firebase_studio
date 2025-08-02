@@ -28,7 +28,7 @@ const CommandOperationSchema = z.object({
   expectedOutcome: z.string().describe('What the result of this step will be.'),
 });
 
-const PlanStepSchema = z.union([
+export const PlanStepSchema = z.union([
     FileOperationSchema,
     CommandOperationSchema
 ]);
@@ -114,6 +114,9 @@ Based on the request, generate a JSON object that strictly follows the output sc
 Ensure all file paths are relative. For any new code, provide the complete file content.
 The 'content' field must contain only raw code, without markdown formatting. For 'rename' or 'move' actions, the 'content' field should contain the new file path.
 `,
+   helpers: {
+      JSONstringify: (context: any) => JSON.stringify(context, null, 2),
+  }
 });
 
 export const agenticFlow = ai.defineFlow(
@@ -222,3 +225,5 @@ The 'content' field must contain only raw code, without markdown formatting. For
     }
   }
 );
+
+    

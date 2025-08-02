@@ -723,7 +723,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     }
   };
   
-  const handleDownloadPatch = (plan: AgenticFlowOutput['plan']) => {
+  const handleDownloadPatch = (plan: PlanStep[]) => {
     let patchContent = '';
     plan.forEach(step => {
       if ('fileName' in step && (step.action === 'write' || step.action === 'edit')) {
@@ -731,7 +731,9 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
         patchContent += `+++ b/${step.fileName}\n`;
         const contentLines = step.content?.split('\n') || [''];
         patchContent += `@@ -0,0 +1,${contentLines.length} @@\n`;
-        patchContent += `${contentLines.map(line => `+${line}`).join('\n')}\n`;
+        contentLines.forEach(line => {
+            patchContent += `+${line}\n`;
+        });
       }
     });
 
@@ -830,7 +832,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             {message.isAwaitingExecution && (
                 <div className="pt-2">
                     <Button onClick={() => startExecution(index, plan, originalPrompt)} className="w-full">
-                        <Play className="mr-2" />
+                        <Play className="mr-2 h-4 w-4" />
                         Execute Plan
                     </Button>
                 </div>
@@ -882,7 +884,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
             
             {isDone && !lastStepFailed && (
                 <>
-                <Separator />
+                <Separator className="my-4" />
                 <Alert variant="default" className="bg-green-500/10 border-green-500/30">
                     <ClipboardCheck className="h-4 w-4" />
                      <div className="flex justify-between items-center">
@@ -900,9 +902,6 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                            <span><strong className="text-foreground">{executedPlan.filter(s => s.status === 'error').length}</strong> errors</span>
                            {timings?.executionEnd && timings.executionStart && (
                              <span>Execution Time: <strong className="text-foreground">{formatTime(timings.executionEnd - timings.executionStart)}</strong></span>
-                           )}
-                           {timings?.summaryEnd && timings.executionEnd && (
-                             <span>Summarizing: <strong className="text-foreground">{formatTime(timings.summaryEnd - timings.executionEnd)}</strong></span>
                            )}
                         </div>
                     </AlertDescription>
@@ -1021,7 +1020,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
               <Textarea
                 ref={textareaRef}
                 placeholder="Prompt Stacky, or drag & drop an image..."
-                className="pr-24 min-h-[60px] resize-none"
+                className="pr-32 min-h-[60px] resize-none"
                 disabled={agentState !== 'idle'}
                 value={input}
                 onChange={handleInputChange}
@@ -1037,14 +1036,14 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
                     accept="image/*"
                  />
                  <Button asChild variant="ghost" size="icon" disabled={agentState !== 'idle'}>
-                    <label htmlFor="file-upload" className="cursor-pointer">
+                    <label htmlFor="file-upload" className="cursor-pointer h-8 w-8 flex items-center justify-center">
                         <Paperclip className="w-5 h-5" />
                     </label>
                  </Button>
-                 <Button variant="ghost" size="icon" onClick={handleMicClick} disabled={agentState !== 'idle'}>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleMicClick} disabled={agentState !== 'idle'}>
                     <Mic className={`w-5 h-5 ${isRecording ? 'text-red-500' : ''}`} />
                  </Button>
-                 <Button type="submit" size="icon" disabled={agentState !== 'idle' || (!input.trim() && !uploadedFile)}>
+                 <Button type="submit" size="icon" className="h-8 w-8" disabled={agentState !== 'idle' || (!input.trim() && !uploadedFile)}>
                     <Send className="w-5 h-5" />
                  </Button>
               </div>
@@ -1077,3 +1076,5 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
+
+    
