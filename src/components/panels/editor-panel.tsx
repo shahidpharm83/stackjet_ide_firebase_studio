@@ -93,7 +93,7 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
           value={file.content}
           onChange={(e) => onContentChange(e.target.value)}
           readOnly={isExecuting}
-          className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6 bg-transparent h-full whitespace-nowrap"
+          className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6 bg-transparent h-full"
           style={{ lineHeight: '1.5rem', paddingTop: '9px', paddingBottom: '9px' }}
           placeholder="Start typing..."
         />
