@@ -129,12 +129,12 @@ export default function Home() {
     });
   };
   
-  const handleViewChange = (view: MainView) => {
-    setActiveMainView(view);
-    if (view === 'editor' && openFiles.length > 0 && !activeFile) {
-        setActiveFile(openFiles[openFiles.length - 1].path);
-    } else if (view === 'editor' && openFiles.length === 0) {
-      setActiveFile(null);
+  const handleViewChange = (view: MainView | string) => {
+    if (view === 'terminal' || view === 'editor') {
+        setActiveMainView(view as MainView);
+    } else {
+        setActiveFile(view);
+        setActiveMainView('editor');
     }
   };
   
@@ -223,15 +223,7 @@ export default function Home() {
   };
   
   const handleToggleTerminal = () => {
-    if (activeMainView === 'terminal') {
-      // If terminal is the main view, switch back to the editor
-      // If there are open files, it will go to the last active one.
-      // If no files are open, it will show the "no files open" message.
-      handleViewChange('editor');
-    } else {
-      // If editor is the view, switch to terminal
-      handleViewChange('terminal');
-    }
+    setActiveMainView(prev => prev === 'terminal' ? 'editor' : 'terminal');
   };
 
   if (!hydrated) {
@@ -290,8 +282,7 @@ export default function Home() {
                     isExecuting={isExecuting}
                     projectOpen={!!project}
                     activeMainView={activeMainView}
-                    setActiveFile={setActiveFile}
-                    setActiveMainView={handleViewChange}
+                    onViewChange={handleViewChange}
                   />
             </Panel>
             {rightPanelVisible && (

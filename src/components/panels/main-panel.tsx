@@ -1,6 +1,7 @@
 
 "use client"
 import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import EditorPanel from "./editor-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Code, Terminal as TerminalIcon } from "lucide-react";
@@ -10,7 +11,6 @@ import {
   Panel,
   PanelResizeHandle,
 } from "react-resizable-panels";
-import { useImperativeHandle, useRef, useState, useEffect } from 'react';
 
 const TerminalPanel = dynamic(() => import("./terminal-panel"), { ssr: false });
 
@@ -24,8 +24,7 @@ type MainPanelProps = {
   isExecuting: boolean;
   projectOpen: boolean;
   activeMainView: MainView;
-  setActiveFile: (path: string | null) => void;
-  setActiveMainView: (view: MainView) => void;
+  onViewChange: (view: MainView | string) => void;
 };
 
 export default function MainPanel({ 
@@ -36,8 +35,7 @@ export default function MainPanel({
   isExecuting,
   projectOpen,
   activeMainView,
-  setActiveFile,
-  setActiveMainView,
+  onViewChange,
 }: MainPanelProps) {
   
   const [hydrated, setHydrated] = useState(false);
@@ -48,16 +46,7 @@ export default function MainPanel({
 
   const noFilesOpen = openFiles.length === 0;
   
-  const handleTabChange = (value: string) => {
-    if (value === 'terminal') {
-      setActiveMainView('terminal');
-    } else {
-      setActiveFile(value);
-      setActiveMainView('editor');
-    }
-  };
-
-  const activeTab = activeMainView === 'terminal' ? 'terminal' : activeFile;
+  const activeTabValue = activeMainView === 'terminal' ? 'terminal' : activeFile;
 
   if (!projectOpen) {
     return (
@@ -79,7 +68,7 @@ export default function MainPanel({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden h-full">
-        <Tabs value={activeTab ?? ""} onValueChange={handleTabChange} className="flex-1 flex flex-col h-full">
+        <Tabs value={activeTabValue ?? ""} onValueChange={onViewChange} className="flex-1 flex flex-col h-full">
             <TabsList className="flex-shrink-0 h-10 p-0 border-b rounded-none justify-start bg-background">
               {openFiles.map(file => (
                 <TabsTrigger 
@@ -101,10 +90,15 @@ export default function MainPanel({
                   </div>
                 </TabsTrigger>
               ))}
+              <TabsTrigger value="terminal" className="h-full rounded-none data-[state=active]:bg-muted data-[state=active]:shadow-none">
+                <TerminalIcon className="w-4 h-4 mr-2" />
+                Terminal
+              </TabsTrigger>
             </TabsList>
             
-            <PanelGroup direction="vertical">
-                <Panel defaultSize={75} minSize={20}>
+            <div className="flex-1 flex flex-col overflow-y-auto">
+              <PanelGroup direction="vertical">
+                  <Panel>
                     {activeMainView === 'editor' && (
                         noFilesOpen ? (
                              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground h-full">
@@ -124,12 +118,14 @@ export default function MainPanel({
                             ))
                           )
                     )}
-                </Panel>
-                <PanelResizeHandle className="h-1 bg-border hover:bg-primary transition-colors data-[resize-handle-state=drag]:bg-primary" />
-                <Panel defaultSize={25} minSize={10}>
-                    <TerminalPanel projectOpen={projectOpen} />
-                </Panel>
-            </PanelGroup>
+                    {activeMainView === 'terminal' && (
+                         <TabsContent value="terminal" className="flex-1 mt-0 bg-background h-full overflow-auto">
+                           <TerminalPanel projectOpen={projectOpen} />
+                         </TabsContent>
+                    )}
+                  </Panel>
+              </PanelGroup>
+            </div>
           </Tabs>
     </div>
   );

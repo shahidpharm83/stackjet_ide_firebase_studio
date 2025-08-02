@@ -3,7 +3,7 @@
 
 import { useState }from "react";
 import dynamic from "next/dynamic";
-import { Play, Settings, Bot, X, FolderOpen, Download, CircleDashed, File as FileIcon } from "lucide-react";
+import { Play, Settings, Bot, X, FolderOpen, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ApiKeyModal from "@/components/modals/api-key-modal";
 import type { Project } from '@/app/page';
