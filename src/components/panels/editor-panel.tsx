@@ -3,6 +3,7 @@ import type { OpenFile } from "@/app/page";
 import { useEffect, useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { Pencil } from "lucide-react";
 
 type EditorPanelProps = {
   file: OpenFile | null;
@@ -66,12 +67,10 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
               <div 
                 key={i} 
                 ref={isCurrentActiveLine ? activeLineRef : null}
-                className={cn(
-                  "relative", 
-                  isCurrentActiveLine ? "wavy-underline-editor" : ""
-                )}
+                className="relative flex items-center justify-end"
                 style={{ lineHeight: '1.5rem' }}
               >
+                 {isCurrentActiveLine && <Pencil className="w-3 h-3 mr-1 text-primary animate-pulse" />}
                 {i + 1}
               </div>
           )
