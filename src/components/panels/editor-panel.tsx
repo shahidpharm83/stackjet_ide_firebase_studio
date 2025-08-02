@@ -16,7 +16,8 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [activeLine, setActiveLine] = useState(-1);
   const activeLineRef = useRef<HTMLDivElement>(null);
-
+  const [isAnimating, setIsAnimating] = useState(false);
+  const wasExecutingRef = useRef(false);
 
   useEffect(() => {
     const syncScroll = () => {
@@ -31,6 +32,15 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
       return () => textarea.removeEventListener('scroll', syncScroll);
     }
   }, []);
+  
+  useEffect(() => {
+      if (wasExecutingRef.current && !isExecuting) {
+          setIsAnimating(true);
+          const timer = setTimeout(() => setIsAnimating(false), 500); // Animation duration
+          return () => clearTimeout(timer);
+      }
+      wasExecutingRef.current = isExecuting;
+  }, [isExecuting]);
 
   useEffect(() => {
     if (isExecuting && file) {
@@ -59,7 +69,7 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
   const lineCount = file.content.split('\n').length;
 
   return (
-    <div className="flex-1 h-full flex font-code text-sm bg-background">
+    <div className={cn("flex-1 h-full flex font-code text-sm bg-background", isAnimating && "animate-line-shuffle")}>
       <ScrollArea className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background pt-[9px] pb-[9px]" ref={lineNumbersRef}>
         {Array.from({ length: lineCount }, (_, i) => {
           const isCurrentActiveLine = isExecuting && (i + 1 === activeLine);

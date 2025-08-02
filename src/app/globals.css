@@ -77,3 +77,15 @@
  50% { text-decoration-color: hsl(var(--primary) / 1.0); }
  100% { text-decoration-color: hsl(var(--primary) / 0.6); }
 }
+
+@keyframes line-shuffle {
+  0% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-2px) rotate(-0.1deg); }
+  50% { transform: translateY(2px) rotate(0.1deg); }
+  75% { transform: translateY(-1px) rotate(0deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
+
+.animate-line-shuffle {
+  animation: line-shuffle 0.5s ease-in-out;
+}
