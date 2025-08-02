@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useTerminal } from "@/contexts/terminal-context";
 
@@ -62,18 +63,22 @@ export default function Header({
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={() => onProjectModalOpenChange(true)}>
-                <FileIcon className="mr-2" />
-                New Project...
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onProjectModalOpenChange(true)}>
                 <FolderOpen className="mr-2" />
                 Open...
               </DropdownMenuItem>
               {project && (
-                 <DropdownMenuItem onClick={onCloseProject}>
-                  <X className="mr-2" />
-                  Close Project
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDownloadProject} disabled={isDownloading}>
+                    <Download className="mr-2" />
+                    Download Project
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onCloseProject}>
+                    <X className="mr-2" />
+                    Close Project
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -82,17 +87,10 @@ export default function Header({
         {project && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{project.name}</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCloseProject}>
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         )}
 
         <div className="flex items-center gap-2">
-           <Button variant="ghost" size="sm" disabled={!project || isDownloading} onClick={onDownloadProject}>
-            {isDownloading ? <CircleDashed className="animate-spin" /> : <Download />}
-            Download
-          </Button>
           <Button variant="ghost" size="sm" disabled={!project} onClick={handleRunProject}>
             <Play />
             Run

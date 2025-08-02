@@ -29,7 +29,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectLocation, setNewProjectLocation] = useState<FileSystemDirectoryHandle | null>(null);
   const [newProjectLocationPath, setNewProjectLocationPath] = useState<string>("");
-  const { recentProjects, addRecentProject, hydrated } = useRecentProjects();
+  const { recentProjects, addRecentProject, isLoading } = useRecentProjects();
   const { toast } = useToast();
 
   const handleSelectLocation = async () => {
@@ -86,15 +86,25 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
             version: "0.1.0",
             private: true,
             scripts: {
-                dev: "next dev",
-                build: "next build",
-                start: "next start",
-                lint: "next lint"
+                "dev": "npm-run-all --parallel dev:next dev:terminal",
+                "dev:next": "next dev --turbopack -p 9002",
+                "dev:terminal": "tsx src/server/terminal-server.ts",
+                "build": "next build",
+                "start": "next start",
+                "lint": "next lint"
             },
             dependencies: {
                  "react": "^18",
                  "react-dom": "^18",
                  "next": "15.3.3"
+            },
+            "devDependencies": {
+                "npm-run-all": "^4.1.5",
+                "tsx": "^4.10.5",
+                "typescript": "^5",
+                "@types/node": "^20",
+                "@types/react": "^18",
+                "@types/react-dom": "^18"
             }
         }, null, 2));
         await writable.close();
@@ -181,7 +191,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
           <TabsContent value="recent" className="mt-4">
              <ScrollArea className="h-72">
                 <div className="pr-4">
-                  {hydrated && recentProjects.length > 0 ? (
+                  {!isLoading && recentProjects.length > 0 ? (
                     <div className="space-y-2">
                         {recentProjects.map((proj, index) => (
                            <div key={index} className="flex items-center justify-between p-2 rounded-md border hover:bg-muted">
@@ -209,7 +219,7 @@ export default function ProjectModal({ isOpen, onOpenChange, openProject }: Proj
           <TabsContent value="new" className="mt-4">
             <div className="space-y-4 py-4 h-72">
                 <p className="text-sm text-muted-foreground">
-                    This will create a new folder on your local machine.
+                    This will create a new folder on your local machine with a basic Next.js setup.
                 </p>
                 <div className="space-y-2">
                     <Label htmlFor="project-name">Project Name</Label>

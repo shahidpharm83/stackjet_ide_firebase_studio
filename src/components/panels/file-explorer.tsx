@@ -98,12 +98,6 @@ type FileExplorerProps = {
 };
 
 export default function FileExplorer({ project, onOpenFile }: FileExplorerProps) {
-  const handleOpenFolderClick = () => {
-    // This function is a placeholder. The actual logic is now in the project modal.
-    // We can trigger the modal from here if needed, but for now, it's in the header.
-    console.log("Open folder clicked from explorer, but is handled by modal.");
-  };
-
   return (
     <aside className="w-full h-full flex flex-col shrink-0">
       <div className="p-2 flex justify-between items-center border-b border-border h-12">
@@ -124,5 +118,3 @@ export default function FileExplorer({ project, onOpenFile }: FileExplorerProps)
     </aside>
   );
 }
-
-    

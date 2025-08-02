@@ -12,11 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { agenticFlow, AgenticFlowOutput, PlanStep } from "@/ai/flows/agentic-flow";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { Project, OpenFile, MainView } from '@/app/page';
+import type { Project, OpenFile } from '@/app/page';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { FileSystemTreeItem } from "@/components/panels/file-explorer";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import type { MainView } from "@/components/panels/main-panel";
 
 type ExecutedStep = PlanStep & {
     startTime: number;
@@ -493,7 +494,11 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     if (!promptText.trim() && !uploadedFile || agentState !== 'idle') return;
     
     if (!project) {
-        setInput("Please open a folder first to provide a context for your project.");
+        toast({
+            variant: "destructive",
+            title: "No Project Open",
+            description: "Please open a folder first to provide a context for your project.",
+        });
         return;
     }
     
@@ -554,7 +559,7 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
       setAgentState("error");
       setTimeout(() => setAgentState("idle"), 3000);
     }
-  }, [agentState, agenticFlowWithRetry, project, uploadedFile, startExecution, messages.length]);
+  }, [agentState, agenticFlowWithRetry, project, uploadedFile, startExecution, messages.length, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1076,5 +1081,3 @@ export default function AiAssistantPanel({ project, refreshFileTree, onOpenFile,
     </div>
   );
 }
-
-    

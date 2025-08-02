@@ -16,9 +16,9 @@ import {
   PanelResizeHandle,
 } from "react-resizable-panels";
 import { useToast } from "@/hooks/use-toast";
-import { agenticFlow } from "@/ai/flows/agentic-flow";
 import useRecentProjects from "@/hooks/use-recent-projects";
 import { TerminalProvider } from "@/contexts/terminal-context";
+import type { MainView } from "@/components/panels/main-panel";
 
 export interface Project {
   name: string;
@@ -34,7 +34,6 @@ export interface OpenFile {
 }
 
 type LeftPanel = "files" | "ai";
-export type MainView = "editor" | "terminal";
 
 
 export default function Home() {
@@ -53,6 +52,9 @@ export default function Home() {
 
   useEffect(() => {
     setHydrated(true);
+    if (!project) {
+      setIsProjectModalOpen(true);
+    }
   }, []);
 
   const getFileHandle = async (root: FileSystemDirectoryHandle, path: string, create = false): Promise<FileSystemFileHandle> => {
@@ -119,19 +121,20 @@ export default function Home() {
         if (activeFile === path) {
             const newActivePath = remainingFiles.length > 0 ? remainingFiles[remainingFiles.length - 1].path : null;
             setActiveFile(newActivePath);
+            if (!newActivePath) {
+                setActiveMainView("editor"); // Or some other default view
+            }
         }
         return remainingFiles;
     });
   };
   
-  const handleViewChange = (view: string) => {
-    if (view === 'terminal') {
-      setActiveMainView('terminal');
-      // When switching to terminal tab, we might want to clear the active file
-      // but preserve the editor view. Let's keep active file for now.
-    } else {
-      setActiveFile(view);
-      setActiveMainView('editor');
+  const handleViewChange = (view: MainView) => {
+    setActiveMainView(view);
+    if (view === 'editor' && openFiles.length > 0 && !activeFile) {
+        setActiveFile(openFiles[openFiles.length - 1].path);
+    } else if (view === 'editor' && openFiles.length === 0) {
+      setActiveFile(null);
     }
   };
   
@@ -144,17 +147,25 @@ export default function Home() {
   }, [openFiles]);
 
   const openProject = useCallback(async (handle: FileSystemDirectoryHandle) => {
-    const tree = await getDirectoryTree(handle);
-    setProject({
-        name: handle.name,
-        handle,
-        tree
-    });
-    addRecentProject(handle);
-    setOpenFiles([]);
-    setActiveFile(null);
-    setIsProjectModalOpen(false);
-  }, [addRecentProject]);
+    try {
+        const tree = await getDirectoryTree(handle);
+        setProject({
+            name: handle.name,
+            handle,
+            tree
+        });
+        addRecentProject(handle);
+        setOpenFiles([]);
+        setActiveFile(null);
+        setIsProjectModalOpen(false);
+    } catch(e: any) {
+        toast({
+            variant: "destructive",
+            title: "Failed to Open Project",
+            description: e.message,
+        })
+    }
+  }, [addRecentProject, toast]);
 
   const handleCloseProject = () => {
     setProject(null);
@@ -162,10 +173,9 @@ export default function Home() {
     setActiveFile(null);
   };
 
-  const addFilesToZip = async (zip: JSZip, dirHandle: FileSystemDirectoryHandle, path: string = '') => {
+  const addFilesToZip = async (zip: any, dirHandle: FileSystemDirectoryHandle, path: string = '') => {
     for await (const [name, handle] of dirHandle.entries()) {
-        // Exclude node_modules and .next directories
-        if (name === 'node_modules' || name === '.next') continue;
+        if (name === 'node_modules' || name === '.next' || name === '.git') continue;
 
         const newPath = path ? `${path}/${name}` : name;
         if (handle.kind === 'file') {
@@ -175,7 +185,7 @@ export default function Home() {
             await addFilesToZip(zip, handle, newPath);
         }
     }
-};
+  };
 
   const handleDownloadProject = async () => {
     if (!project) return;
@@ -185,7 +195,8 @@ export default function Home() {
     });
 
     try {
-        const zip = new (await import('jszip')).default();
+        const JSZip = (await import('jszip')).default;
+        const zip = new JSZip();
         await addFilesToZip(zip, project.handle);
         
         const content = await zip.generateAsync({type:"blob"});
@@ -210,9 +221,21 @@ export default function Home() {
         });
     }
   };
+  
+  const handleToggleTerminal = () => {
+    if (activeMainView === 'terminal') {
+      // If terminal is the main view, switch back to the editor
+      // If there are open files, it will go to the last active one.
+      // If no files are open, it will show the "no files open" message.
+      handleViewChange('editor');
+    } else {
+      // If editor is the view, switch to terminal
+      handleViewChange('terminal');
+    }
+  };
 
   if (!hydrated) {
-    return null;
+    return null; // Or a loading spinner
   }
 
   return (
@@ -251,7 +274,7 @@ export default function Home() {
                           onOpenFile={handleOpenFile}
                           onFileContentChange={handleFileContentChange}
                           getOpenFile={getOpenFile}
-                          setActiveMainView={setActiveMainView}
+                          setActiveMainView={handleViewChange}
                       />
                   )}
                 </Panel>
@@ -259,15 +282,16 @@ export default function Home() {
               </>
             )}
             <Panel>
-              <MainPanel 
+                <MainPanel 
                     openFiles={openFiles} 
                     activeFile={activeFile}
                     onCloseFile={handleCloseFile}
-                    onViewChange={handleViewChange}
                     onFileContentChange={handleFileContentChange}
                     isExecuting={isExecuting}
                     projectOpen={!!project}
                     activeMainView={activeMainView}
+                    setActiveFile={setActiveFile}
+                    setActiveMainView={handleViewChange}
                   />
             </Panel>
             {rightPanelVisible && (
@@ -281,7 +305,7 @@ export default function Home() {
           </PanelGroup>
           <RightActivityBar onToggle={() => setRightPanelVisible(!rightPanelVisible)} />
         </div>
-        <StatusBar onToggleTerminal={() => handleViewChange(activeMainView === 'terminal' ? 'editor' : 'terminal')} />
+        <StatusBar onToggleTerminal={handleToggleTerminal} />
       </div>
     </TerminalProvider>
   );

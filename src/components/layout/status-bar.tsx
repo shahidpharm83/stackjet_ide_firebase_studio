@@ -13,8 +13,8 @@ export default function StatusBar({ onToggleTerminal }: StatusBarProps) {
   return (
     <div className="h-8 border-t border-border flex items-center px-4 justify-between text-sm">
       <div className="flex items-center gap-4">
-         <Button variant="ghost" size="sm" className="h-full" onClick={onToggleTerminal}>
-            <Terminal />
+         <Button variant="ghost" size="sm" className="h-full px-2" onClick={onToggleTerminal}>
+            <Terminal className="mr-2" />
             Terminal
          </Button>
       </div>

@@ -52,14 +52,14 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
     <div className="flex-1 h-full flex font-code text-sm bg-background">
       <div 
         ref={lineNumbersRef} 
-        className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background"
+        className="w-12 text-right pr-4 text-muted-foreground/50 select-none bg-background pt-[9px] pb-[9px]"
         style={{ lineHeight: '1.5rem', overflow: 'hidden' }}
       >
         {Array.from({ length: lineCount }, (_, i) => (
           <div 
             key={i} 
             className={cn(
-              "py-2 px-1", 
+              "relative", 
               isExecuting && i + 1 === activeLine ? "wavy-underline-editor" : ""
             )}
           >
@@ -73,7 +73,7 @@ export default function EditorPanel({ file, onContentChange, isExecuting }: Edit
         onChange={(e) => onContentChange(e.target.value)}
         readOnly={isExecuting}
         className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-code text-sm leading-6 bg-transparent"
-        style={{ lineHeight: '1.5rem', padding: '8px 0' }}
+        style={{ lineHeight: '1.5rem', paddingTop: '9px', paddingBottom: '9px' }}
         placeholder="Start typing..."
       />
     </div>

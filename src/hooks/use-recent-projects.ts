@@ -64,7 +64,11 @@ export default function useRecentProjects() {
           try {
             const handle = await idb.get(name);
             if (handle) {
-              projects.push({ name, handle });
+              // Verify we still have permission
+              const permission = await handle.queryPermission({ mode: 'readwrite' });
+              if (permission === 'granted') {
+                projects.push({ name, handle });
+              }
             }
           } catch(e) {
             console.warn(`Could not load recent project handle for "${name}":`, e);
